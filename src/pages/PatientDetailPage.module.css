@@ -1,0 +1,18 @@
+.contents {
+    display: flex;
+}
+
+.page-wrapper {
+    background-color: #e2e2e2;
+    max-width: calc(100% - 80px);
+    width: 100vw;
+    padding: 5px;
+}
+
+.patient-header {
+    padding: 0 10px;
+}
+
+.card-body {
+    min-height: 100vh;
+}

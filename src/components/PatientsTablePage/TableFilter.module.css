@@ -1,0 +1,52 @@
+.selector-field {
+    position: relative;
+    display: flex;
+    width: 100%;
+    margin-right: 15px;
+}
+
+.selector-field.initial {
+    width: calc(50% - 15px);
+}
+
+.filter-category {
+    width: 35%;
+}
+
+#filter-string {
+    width: 100%;
+}
+
+.btn-add-filter {
+    margin-left: 15px;
+}
+
+.selector-search {
+    width: 100%;
+    margin-right: 15px;
+}
+
+.from-to {
+    height: 38px;
+    padding: 5px;
+    border-top: 1px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.from {
+    border-right: 1px dotted #e4e6e7;
+}
+.to {
+    border-left: 1px dotted #e4e6e7;
+}
+
+.date-picker {
+    position: absolute;
+    top: 43px;
+    left: calc(0px - 1vw);
+}
+
+.date-picker.expanded {
+    border: 1px solid #787878;
+    z-index: 2;
+}

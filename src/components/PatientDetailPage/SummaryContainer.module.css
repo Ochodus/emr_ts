@@ -1,0 +1,28 @@
+.inline-row {
+    display: flex;
+    max-width: 100%;
+}
+
+.cards-inline {
+    width: 100%;
+    padding: 10px;
+    min-width: 0;
+}
+
+.adder-inline {
+    width: auto;
+}
+
+.card-title {
+    height: auto;
+}
+
+.btn-close {
+    float: right;
+    cursor: pointer;
+}
+
+.header-contents {
+    display: flex;
+    justify-content: space-between;
+}

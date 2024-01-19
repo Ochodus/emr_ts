@@ -1,0 +1,27 @@
+.card-filter {
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
+    margin-right: 6px;
+    width: auto;
+    overflow: hidden;
+    max-height: 84px;
+    font-size: 11px;
+    display: flex;
+}
+
+.card-filter>.filter{
+    padding: 5px 10px;
+}
+
+.card-filter:hover {
+    background-color: rgb(231, 231, 231);
+    border-color:Red;
+    transition: all 0.3s;
+}
+
+.card-filter:active {
+    background-color: rgb(206, 206, 206);
+    border-color:rgb(143, 0, 0);
+    transition: all 0.05s linear;
+}

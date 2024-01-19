@@ -1,0 +1,10 @@
+
+.cards-inline{
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.record-table {
+    padding: 10px;
+    width: 33.3%;
+}

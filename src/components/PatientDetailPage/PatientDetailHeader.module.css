@@ -1,0 +1,64 @@
+.header-main {
+    width: 100%;
+    max-width: 100vw;
+    position: relative;
+    max-height: 80px;
+    font-family: Pretendard,-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", Droid Sans, "Helvetica Neue", sans-serif;
+    color: #37352f;
+}
+
+.inline-section {
+    position: relative;
+    display: flex;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.col-group {
+    vertical-align: middle;
+    position: relative;
+    display: flex;
+    width: 40%;
+    padding: 12px;
+}
+
+.col-group.border {
+    width: 0%;
+    padding: 0%;
+    border-right: 1px solid #cfcfcf;
+}
+
+.text-wrapper{
+    margin: auto 0;
+    margin-right: 10px;
+}
+
+.patient-id {
+    font-size: 15px;
+    font-weight: 550;
+    color: #77746e;
+    text-align: center;
+}
+
+.patient-name {
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.patient-detail {
+    font-size: 15px;
+    font-weight: 550;
+    color: #77746e;
+    text-align: center;
+}
+
+.patient-state {
+    color: #77746e;
+}
+
+.value {
+    margin-left: 6px;
+    font-weight: bold;
+    color: #37352f;
+}

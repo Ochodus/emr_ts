@@ -1,0 +1,35 @@
+.resizer {
+    width: 5px;
+    height: 100%;
+    display: inline-block;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transform: translateX(50%);
+    z-index: 1;
+    touch-action:none;
+
+    &.isResizing {
+        border-left: 1px solid;
+    }
+}
+
+.sorter {
+    width: 0px;
+    height: 100%;
+    display: inline-block;
+    position: absolute;
+    background: center/90% no-repeat url('../../assets/sort_ascending_copy.svg');
+    background-size: 100% 100%;
+    right: 5px;
+    top: 0px;
+}
+
+th:nth-of-type(1)>.sorter {
+    display: none;
+}
+
+.scroller {
+    overflow: auto;
+    height: 100%;
+}

@@ -1,0 +1,16 @@
+.photoFrame {
+    justify-content: center;
+    padding: 25px;
+}
+
+.photoFrame>canvas {
+    border: 1px solid;
+}
+
+.setting {
+    padding: 10px;
+    justify-content: space-around;
+    border-radius: 15px;
+    border-top: 1px solid gray;
+    border-bottom: 1px solid gray;
+}
