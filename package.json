@@ -46,7 +46,7 @@
   },
   "devDependencies": {
     "@types/bootstrap-multiselect": "^0.9.5",
-    "react-scripts": "5.0.1"
+    "react-scripts": "^5.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -71,5 +71,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "homepage": "/onnuri"
 }
