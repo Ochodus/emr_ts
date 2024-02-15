@@ -1,0 +1,237 @@
+.title {
+    font-size: 36px;
+    padding: 10px;
+}
+
+.page-title {
+    border-bottom: 2px solid #cccccc;
+    font-size: 28px;
+    padding-bottom: 10px;
+}
+
+.contents {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 10px 40px;
+}
+
+.page-content {
+    margin-top: 30px;
+}
+
+.group-field {
+    margin-bottom: 50px;
+}
+
+.group-title {
+    font-size: 20px;
+    font-weight: 550;
+    margin-bottom: 25px; 
+}
+
+.group-content {
+    margin-top: 10px;
+}
+
+.inline {
+    display: table;
+    width: 100%;
+    height: 100%;
+    justify-content: space-between;
+}
+
+.cell {
+    width: 50%;
+    display: table-cell;
+}
+
+.cell.small {
+    width: 30%;
+}
+
+.cell.smaller {
+    width: 20%;
+}
+
+.cell.text-only {
+    width: 10%;
+}
+
+.radio-cell {
+    margin-left: 10% !important;
+    margin: auto;
+}
+
+.dash {
+    padding: 5px;
+    vertical-align: middle;
+    border-top: 1px solid #cccccc;
+    border-bottom: 1px solid #cccccc;
+}
+
+select {
+    height: 38px;
+}
+
+.inline-btn {
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+}
+
+.inline-btn>button {
+    width: 40%;
+    margin: auto;
+}
+
+.inline-title {
+    margin-bottom: 10px;
+}
+
+.patientId[type=number]::-webkit-inner-spin-button,
+.patientId[type=number]::-webkit-outer-spin-button,
+.phoneNumber[type=number]::-webkit-inner-spin-button,
+.phoneNumber[type=number]::-webkit-inner-spin-button,
+.postalCode[type=number]::-webkit-inner-spin-button,
+.postalCode[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+td:has(.row-title) {
+    vertical-align: middle;
+}
+
+.row-title-ko-wrapper {
+    display: flex;
+    justify-content: space-between;
+}
+
+.row-title-ko {
+    font-size: 20px;
+    font-weight: 550;
+    color: rgb(92, 92, 92);
+}
+
+.row-title-en {
+    font-size: 10px;
+    display: flex;
+    color: rgb(131, 131, 131);
+}
+
+.row-title-unit {
+    height: auto;
+    margin: auto 0;
+    color: rgb(75, 75, 75);
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.entry {
+    margin: auto;
+    width: 50%;
+    margin-bottom: 5px;
+    max-width: 100px;
+}
+
+.min-max {
+    font-size: 15px;
+}
+
+.entry-wrapper {
+    max-width: 150px;
+    margin: auto;
+}
+
+
+.entry-wrapper.entry-contents {
+    position: absolute;
+    width: 150%;
+    right: 10px;
+    bottom: 10px;
+    z-index: 2
+}
+
+td:has(.entry-wrapper.entry-contents) {
+    position: relative;
+}
+
+td:has(.entry) {
+    vertical-align: middle;
+}
+
+.cell.large {
+    width: 100%;
+    padding-right: 10px;
+}
+
+.chartInput {
+    height: 80px;
+    justify-content: center;
+}
+
+.chartValueInput>input {
+    margin: auto;
+    margin-bottom: 5px;
+    border-bottom: 1px solid gray
+}
+
+.chartMinMaxInput {
+    display: flex;
+    justify-content: center;
+}
+
+.inline.chart {
+    display: flex;
+}
+
+.chartPercentageInput>input {
+    margin: auto;
+}
+
+.inspection {
+    padding: 10px;
+    margin: 10px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.delete {
+    margin: 10px 5px;
+    background-color: white;
+    border: 1px solid white;
+    text-align: center;
+}
+
+.delete:hover {
+    background-color: gray;
+    border: 1px solid gray;
+}
+
+table {
+    margin: 10px 0;
+    border: 1px solid lightgray;
+    width: 100%;
+}
+
+th {
+    background-color: hsl(210deg 25% 96.86%);
+    border: 0.0625rem solid hsl(212deg 17.56% 72.48%);
+}
+
+td {
+    padding: 5px;
+    width: 70%;
+    border: 0.0625rem solid hsl(212deg 17.56% 72.48%);
+}
+
+.unit {
+    min-width: 15%;
+    font-size: 12px;
+    line-height: 38px;
+}
+
+.amountField {
+    display: flex;
+    justify-content: space-evenly;
+}

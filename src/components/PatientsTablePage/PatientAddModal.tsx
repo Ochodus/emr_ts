@@ -8,7 +8,7 @@ import { useLocalTokenValidation } from '../../api/commons/auth'
 import styles from './PatientAddModal.module.css'
 import classNames from 'classnames/bind'
 import { AddressSearch } from '../commons'
-import { Patient } from '../../pages/PatientsTablePage'
+import { Patient, User } from '../../interfaces'
 
 interface PatientAddModalProps {
     show: boolean, 
@@ -16,17 +16,6 @@ interface PatientAddModalProps {
     selectedPatient: Patient | null,
     addFunction: (newPatient: Patient, isNew: boolean) => void
     handleClose: () => void, 
-}
-
-interface User {
-    id: number,
-    email: string,
-    first_name: string,
-    last_name: string,
-    position: string,
-    sex: number,
-    phone_number: string,
-    department: string
 }
 
 const PatientAddModal = ({ show, isNew, selectedPatient, addFunction, handleClose }: PatientAddModalProps) => {
@@ -146,10 +135,10 @@ const PatientAddModal = ({ show, isNew, selectedPatient, addFunction, handleClos
             "\nmemo: " + patientNote,
         )
 
-        const newPatient: Patient = {
+        const newPatient: any = {
             first_name: patientName[1],
             last_name: patientName[0],
-            sex: patientGender,
+            sex: +patientGender,
             birthday: patientBirth,
             height: +patientHeight,
             weight: +patientWeight,
@@ -163,12 +152,12 @@ const PatientAddModal = ({ show, isNew, selectedPatient, addFunction, handleClos
             social_number: +patientRRN,
             user_id: patientDoctor === "미지정" ? 1 : +patientDoctor,
             memo: patientNote,
-            noks: [{
+            nok: [{
                 type: "",
                 first_name: nokName[0],
                 last_name: nokName[1],
-                sex: nokGender === "" ? "-1" : nokGender,
-                birthday: new Date(nokBirth).toLocaleDateString('en-CA'),
+                sex: nokGender === "" ? -1 : +nokGender,
+                birthday: '1995-12-12',
                 tel: `${nokPhoneNumber[0]}-${nokPhoneNumber[1]}-${nokPhoneNumber[2]}`,
                 address: nokAddress[0],
                 address_detail: nokAddress[1],

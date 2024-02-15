@@ -1,21 +1,38 @@
-import { useState } from 'react'
-import OcrParser from '../commons/OcrParser'
+import { useMemo, useState } from 'react'
+import OcrParser from '../../../commons/OcrParser'
 import Modal from 'react-bootstrap/Modal'
 import InputGroup from 'react-bootstrap/InputGroup'
 import Form from 'react-bootstrap/Form'
 import Button from 'react-bootstrap/Button'
 import styles from './ImooveAddModal.module.css'
 import classNames from 'classnames/bind';
+import { useParams } from 'react-router-dom'
+import axios from 'axios'
+import { useDateTimeParser } from '../../../../api/commons/dateTimeParse'
 
 const ImooveAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, handleClose: () => void, isNew?: boolean, cv: any }) => {
     const cx = classNames.bind(styles);
+    const dateParse = useDateTimeParser()
+
+    const { patient_id } = useParams();
+    const auth = window.localStorage.getItem("persist:auth")
+	const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
+	const url = `/api/patients/${patient_id}/medical/inspections/imoove`
+
+    const config = useMemo(() => {
+		return {
+			headers: {
+				Authorization: "Bearer " + accessToken,
+			},
+		}
+	}, [accessToken])
 
     const [imooveType, setImooveType] = useState("")
     const [strength, setStrength] = useState("")
     const [code, setCode] = useState("")
     const [duration, setDuration] = useState("")
     const [sensitivity, setSensitivity] = useState("")
-    const [exDate, setExDate] = useState("")
+    const [exDate, setExDate] = useState(new Date())
 
     const [supportStability, setSupportStability] = useState("")
     const [supportDistributionL, setSupportDistributionL] = useState("")
@@ -36,7 +53,7 @@ const ImooveAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, h
         setCode(result['code'])
         setDuration(result['duration'])
         setSensitivity(result['sensitivity'])
-        setExDate(new Date(result['exDate']).toLocaleDateString('en-CA'))
+        setExDate(new Date(result['exDate']))
         
         setSupportStability(result['supportStability'].replace(/[^0-9]/g, ""))
         setSupportDistributionL(result['supportDistribution'].split('/')[0].replace(/[^0-9]/g, ""))
@@ -59,15 +76,46 @@ const ImooveAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, h
     const renderSelected = () => {
     }
 
-    const addPatient = () => {
-        console.log(
-            "\nType: " + imooveType,
-            "\nStrength: " + strength,
-            "\nCode: " + code,
-            "\nDuration: " + duration,
-            
-        )
-        handleClose()
+    const addNewImoove = async () => {
+        const newImooveRecord = {
+            file_url: "",
+            inspected: dateParse(exDate),
+            content: {
+                type: imooveType,
+                strength: strength,
+                code: code,
+                time: duration,
+                sensitivity: sensitivity,
+                supports: {
+                    stability: supportStability,
+                    distribution: {
+                        denominator: supportDistributionR,
+                        numerator: supportDistributionL,
+                        points: supportPoints
+                    }
+                },
+                trunk: {
+                    stability: trunkStability,
+                    distribution: {
+                        denominator: trunkDistributionR,
+                        numerator: trunkDistributionL,
+                        points: trunkPoints
+                    }
+                },
+                postural_coordination: {
+                    value: posturalCoordination,
+                    point: posturalPoints
+                },
+                postural_strategy: posturalStrategy
+            },
+            detail: ""
+        }
+        try {
+            await axios.post(url, newImooveRecord, config)
+                console.log("InBody 검사 기록 추가 성공");
+        } catch (error) {
+                console.error("InBody 검사 기록 추가 중 오류 발생:", error);
+        }
     }
 
     return (
@@ -200,8 +248,8 @@ const ImooveAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, h
                                             <Form.Control
                                                 type="date"
                                                 placeholder=""
-                                                value={exDate}
-                                                onChange={(e) => setExDate(e.target.value)}
+                                                value={exDate.toLocaleDateString('en-CA')}
+                                                onChange={(e) => setExDate(new Date(e.target.value))}
                                             >
                                             </Form.Control>
                                         </InputGroup>
@@ -373,7 +421,7 @@ const ImooveAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, h
             </Modal.Body>
             <Modal.Footer>
                 <div className={cx("inline-btn")}>
-                    <Button variant="primary" onClick={addPatient}>
+                    <Button variant="primary" onClick={addNewImoove}>
                         {isNew ? "추가": "변경"}
                     </Button>
                     <Button variant="secondary" onClick={handleClose}>

@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import Card from 'react-bootstrap/Card';
-import { CardAdder, SummaryCard } from '.';
+import { CardAdder, SummaryCard } from '../..';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'react-date-range-ts/dist/styles.css';
 import 'react-date-range-ts/dist/theme/default.css';
 import styles from './SummaryContainer.module.css';
 import classNames from 'classnames/bind';
 
-const SummaryContainer = () => {
+const SummaryContainer = ({axiosMode}: {axiosMode: boolean}) => {
 
   const cx = classNames.bind(styles);
 
@@ -47,7 +47,7 @@ const SummaryContainer = () => {
                                         <div onClick={() => handleCardClose(row_index, col_index)}>X</div>
                                     </div>
                                 </Card.Header>
-                                <SummaryCard type={card}/>
+                                <SummaryCard axiosMode={axiosMode} type={card}/>
                             </Card>
                         </div>
                     </div>

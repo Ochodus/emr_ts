@@ -19,7 +19,7 @@
     height: 100%;
     display: inline-block;
     position: absolute;
-    background: center/90% no-repeat url('../../assets/sort_ascending_copy.svg');
+    background: center/90% no-repeat url('../../../../assets/sort_ascending_copy.svg');
     background-size: 100% 100%;
     right: 5px;
     top: 0px;
@@ -32,4 +32,26 @@ th:nth-of-type(1)>.sorter {
 .scroller {
     overflow: auto;
     height: 100%;
+}
+
+input[type=range] {
+    width: 90%;
+}
+
+#term_num {
+    width: 1%;
+    background-color: black;
+}
+
+datalist {
+    display: grid;
+    grid-auto-flow: column;
+    width:99%;
+}
+
+form {
+    display: flex;
+    flex-flow: wrap;
+    justify-content: space-around;
+    text-align: left;
 }

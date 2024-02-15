@@ -1,10 +1,10 @@
-import CardAdder from './CardAdder';
+import CardAdder from './subPages/Summary/CardAdder';
 import PatientDetailHeader from './PatientDetailHeader';
 import SideBar from './SideBar';
-import SummaryCard from './SummaryCard';
-import SummaryContainer from './SummaryContainer';
-import ImooveAddModal from './ImooveAddModal';
-import InBodyAddModal from './InBodyAddModal';
-import InBodyTable from './InBodyTable';
+import SummaryCard from './subPages/Summary/SummaryCard';
+import SummaryContainer from './subPages/Summary/SummaryContainer';
+import ImooveAddModal from './subPages/InspectionHistory/ImooveAddModal';
+import InBodyAddModal from './subPages/InspectionHistory/InBodyAddModal';
+import InBodyTable from './subPages/InspectionHistory/InBodyTable';
 
 export { CardAdder, PatientDetailHeader, SideBar, SummaryCard, SummaryContainer, ImooveAddModal, InBodyAddModal, InBodyTable }

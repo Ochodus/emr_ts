@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Card from 'react-bootstrap/Card'
-import { MedicalRecord } from './subPages/MedicalRecord'
+import { MedicalRecord } from '../MedicalRecord'
 import { ResponsiveBump } from '@nivo/bump';
 import axios from 'axios'
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -11,7 +11,7 @@ import classNames from 'classnames/bind';
 
 
 
-const SummaryCard = ({type}: {type: string}) => {
+const SummaryCard = ({type, axiosMode}: {type: string, axiosMode: boolean}) => {
     const patient_id=4
     const [curPatientRecordData, setCurPatientRecordData] = useState()
     const cx = classNames.bind(styles);
@@ -140,14 +140,14 @@ const SummaryCard = ({type}: {type: string}) => {
     ]
 
     useEffect(() => {
-      getPatientRecords();
+      if (axiosMode) getPatientRecords();
     }, [])
 
     return (
         <Card.Body style={{ minHeight: "200px", height: "300px" }}>
             {
                 type === "진료 기록"
-                ?   <MedicalRecord isSummaryMode></MedicalRecord>
+                ?   <MedicalRecord isSummaryMode axiosMode={axiosMode}></MedicalRecord>
                 :   type === "SMM" ?
                     <ResponsiveBump
                         data={data}

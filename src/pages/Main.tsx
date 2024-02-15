@@ -8,13 +8,12 @@ import styles from './Main.module.css';
 import classNames from 'classnames/bind';
 
 
-const Main = () => {
+const Main = ({axiosMode}: {axiosMode: boolean}) => {
   const navigate = useNavigate();
   const cx = classNames.bind(styles);
+  const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
 
   const [isLogin, setIsLogin] = useState(false) // 현재 로그인 여부 저장
-
-  const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
 
   function handleSectionClick(section: string) {
     navigate("/manage/" + section);
@@ -22,7 +21,7 @@ const Main = () => {
 
   useEffect(() => {
     let testMode = true
-    if (process.env.NODE_ENV !== 'development' || testMode) checkAuth().then((resolvedData) => {
+    if ((process.env.NODE_ENV !== 'development' || testMode) && axiosMode) checkAuth().then((resolvedData) => {
       setIsLogin(resolvedData)
     })
   }, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사

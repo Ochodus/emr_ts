@@ -1,5 +1,5 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Patient } from '../../pages/PatientsTablePage';
+import { Patient } from '../../interfaces';
 import styles from './PatientDetailHeader.module.css'
 import classNames from 'classnames/bind';
 

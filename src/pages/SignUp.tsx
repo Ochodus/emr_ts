@@ -8,7 +8,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import styles from './SignUp.module.css'
 import classNames from 'classnames/bind';
 
-const SignUp = () => {
+const SignUp = ({axiosMode}: {axiosMode: boolean}) => {
   const cx = classNames.bind(styles)
   const navigate = useNavigate()
 

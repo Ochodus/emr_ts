@@ -23,7 +23,7 @@
 }
 
 .section {
-    padding: 0px 30px 10px 30px;
+    padding-bottom: 10px;
 }
 
 .section-header {
@@ -166,10 +166,6 @@ svg:hover {
 
 .selected {
     display: none;
-}
-
-.section {
-    padding: 0px 30px 10px 30px;
 }
 
 .section-header {

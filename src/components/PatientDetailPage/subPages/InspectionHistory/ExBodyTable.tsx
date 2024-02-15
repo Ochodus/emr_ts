@@ -3,7 +3,7 @@ import { useTable } from "react-table";
 import styles from './InBodyTable.module.css'
 import classNames from 'classnames/bind';
 
-interface InBodyTableProps {
+interface ExBodyTableProps {
   children?: React.ReactNode,
   headers?: any,
   items: any,
@@ -12,7 +12,7 @@ interface InBodyTableProps {
   useSelector: boolean
 }
 
-export const InBodyTable = forwardRef(({ headers, items = [], onSelectedRowIdsChange, table_width, useSelector}: InBodyTableProps, ref) => { // items props 받기, default parameter 빈 배열로 설정
+export const ExBodyTable = forwardRef(({ headers, items = [], onSelectedRowIdsChange, table_width, useSelector}: ExBodyTableProps, ref) => { // items props 받기, default parameter 빈 배열로 설정
   if (!headers || !headers.length) {
     throw new Error("<DataTable /> headers is required.");
   }
@@ -20,8 +20,6 @@ export const InBodyTable = forwardRef(({ headers, items = [], onSelectedRowIdsCh
   const defaultColumn = useMemo(
     () => ({
       width: 30,
-      minWidth: 30,
-      maxWidth: 500
     }),
     []
   )
@@ -50,7 +48,7 @@ export const InBodyTable = forwardRef(({ headers, items = [], onSelectedRowIdsCh
             {headerGroups.map((headerGroup) => (
               <tr {...headerGroup.getHeaderGroupProps()}>
                 {headerGroup.headers.map((column) => (
-                  <th {...column.getHeaderProps()}>{column.render("Header")}
+                  <th {...column.getHeaderProps({style: { width: '200px' }})}>{column.render("Header")}
                   </th>
                 ))}
               </tr>
@@ -89,4 +87,4 @@ export const InBodyTable = forwardRef(({ headers, items = [], onSelectedRowIdsCh
   );
 });
 
-export default InBodyTable;
+export default ExBodyTable;

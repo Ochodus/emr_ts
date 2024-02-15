@@ -2,66 +2,83 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Table } from "../../../commons/Table";
 import { Card, Button } from "react-bootstrap";
 import { TableHeader } from "../../../commons/Table"
-import { ReportHistoryAddModal } from ".";
+import { ExerciseHistoryAddModal } from ".";
 import { ReactComponent as AddIcon } from '../../../../assets/add_icon.svg';
 import { useParams } from 'react-router-dom';
 import axios from "axios";
 import { useLocalTokenValidation } from "../../../../api/commons/auth";
-import styles from './ReportHistory.module.css';
+import styles from './ExerciseHistory.module.css';
 import classNames from 'classnames/bind';
 
-export interface Changes {
-	name: string,
-	before_value: number,
-	before_trial: number,
-	after_value: number,
-	after_trial: number,
-	is_improved: true
+export interface Trial {
+	therapist: string,
+	exercise: string,
+	time: string,
+	sets: number,
+	count_per_set: number
 }
 
-export interface Report {
-	startDate: string,
-	endDate: string,
-	changes: Changes[],
-	changes_detail?: object,
-	memo: string
-} // Report 객체 타입
+export interface Exercise {
+	progressed: string,
+	total_time: string,
+	trial_exercises: Trial[],
+	memo: string,
+} // MedicalRecord 객체 타입
 
-const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axiosMode: boolean }) => {
+const ExerciseHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axiosMode: boolean }) => {
 	const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
 	const cx = classNames.bind(styles)
 
 	const headers: TableHeader = [
 		{ 
-			Header: "리포트 기간",
-			accessor: "startDate",
+			Header: "시행 날짜",
+			accessor: "progressed",
 			Cell: ({ row }) => {
+				let dateArray = row.original.progressed?.split(/[TZ]/)[0].split('-')
+				let timeArray = row.original.progressed?.split(/[TZ]/)[1].split(':')
 				return (
 					<div>
-						{`${row.original.startDate} ~ ${row.original.endDate}`}
+						{`${dateArray[0]}년 ${dateArray[1]}월 ${dateArray[2]}일  ${timeArray[0]}시 ${timeArray[1]}분`}
 					</div>
 				)
 			},
 			width: 40
 		},
 		{ 
-			Header: "변화 항목",
-			accessor: "changes",
+			Header: "운동 종류",
+			accessor: "exercise",
 			Cell: ({ row }) => (
 				<div>
-					{row.original.changes.map((change: Changes, index: number) => {
-						return row.original.changes.length - 1 !== index ? `${change.name}, ` : `${change.name}`
-					})}
+					{row.original.trial_exercises[0].therapist}
 				</div>
 			),
 			width: 40
 		},
 		{ 
-			Header: "기타 항목",
-			accessor: "changes_detial",
+			Header: "상세 내역",
+			accessor: "details",
 			Cell: ({ row }) => (
 				<div>
-					{ JSON.stringify(row.original.changes_detail) }
+				</div>
+			),
+			width: 40
+		},
+		{ 
+			Header: "시행 시간",
+			accessor: "time",
+			Cell: ({ row }) => (
+				<div>
+					{ row.original.trial_exercises[0].time }
+				</div>
+			),
+			width: 40
+		},
+		{ 
+			Header: "시행 횟수",
+			accessor: "count",
+			Cell: ({ row }) => (
+				<div>
+					{ row.original.trial_exercises.length }
 				</div>
 			),
 			width: 40
@@ -77,7 +94,7 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 			Cell: ({ row }) => (
 				<div className={cx('editing-buttons')}>
 					<Button className={cx('cell-button')} onClick={() => handleModalOpen(false, row.index)}>수정</Button>
-					<Button className={cx('cell-button')} onClick={() => deleteReportHistory(row.index)}>삭제</Button>
+					<Button className={cx('cell-button')} onClick={() => deleteExerciseHistory(row.index)}>삭제</Button>
 				</div>
 			),
 			width: 100
@@ -87,7 +104,7 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 	const { patient_id } = useParams();
 	const auth = window.localStorage.getItem("persist:auth")
 	const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
-	const url = `/api/patients/${patient_id}/medical/reports`
+	const url = `/api/patients/${patient_id}/medical/kinesitherapy`
 
 	const config = useMemo(() => {
 		return {
@@ -97,63 +114,63 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 		}
 	}, [accessToken])
 
-	const [reportHistory, setReportHistory] = useState<(Report & {id: number})[]>([]);
+	const [exerciseHistory, setExerciseHistory] = useState<(Exercise & {id: number})[]>([]);
 
 	const [isModalVisible, setIsModalVisible] = useState(false) // 환자 추가/편집 모달 표시 여부
-	const [isNewReport, setIsNewReport] = useState(false) // 모달의 추가/편집 모드
-	const [targetReportIndex, setTargetReportIndex] = useState<number>(-1) // 수정 및 삭제에 사용되는 타깃 환자 인덱스 (로컬 데이터 기준 인덱스 / 환자 고유 아이디와 다름)
+	const [isNewExercise, setIsNewExercise] = useState(false) // 모달의 추가/편집 모드
+	const [targetExerciseIndex, setTargetExerciseIndex] = useState<number>(-1) // 수정 및 삭제에 사용되는 타깃 환자 인덱스 (로컬 데이터 기준 인덱스 / 환자 고유 아이디와 다름)
 
-	const getReportHistory = useCallback(async () => {
+	const getExerciseHistory = useCallback(async () => {
 		try {
 			const response = await axios.get(
 				url,
 				config
 			)
-		
+		 
 			console.log(response.data);
-			setReportHistory(response.data);
+			setExerciseHistory(response.data);
 		} catch (error) {
 			console.error("진료 조회 중 오류 발생:", error);
 		}
 	}, [config])
 	
-	const postMedicalRecord = async (newReport: Report, isNewReport: boolean) => {
+	const postExerciseHistory = async (newExercise: Exercise, isNewExercise: boolean) => {
 		try {
-			isNewReport || !reportHistory ? await axios.post(url, newReport, config) : await axios.patch(`${url}/${reportHistory[targetReportIndex].id}`, newReport, config)
+			isNewExercise || !exerciseHistory ? await axios.post(url, newExercise, config) : await axios.patch(`${url}/${exerciseHistory[targetExerciseIndex].id}`, newExercise, config)
 		  	console.log("진료 기록 추가 성공");
-			getReportHistory();
+			getExerciseHistory();
 		} catch (error) {
 		  	console.error("진료 기록 추가 중 오류 발생:", error);
 		}
 	}
 
-	const deleteReportHistory = async (targetReportIndex: number) => {
-		if (reportHistory) {
-			let targetId = reportHistory[targetReportIndex].id
+	const deleteExerciseHistory = async (targetExerciseIndex: number) => {
+		if (exerciseHistory) {
+			let targetId = exerciseHistory[targetExerciseIndex].id
 			console.log(`${url}/${targetId}`)
 			try {
 				await axios.delete(
 					`${url}/${targetId}`,
 					config
 				)
-				getReportHistory()
+				getExerciseHistory()
 			} catch (error) {
 				console.error("환자 삭제 중 오류 발생:", error)
 			}
 		}
 	} // 환자 삭제
 
-	const handleModalOpen = (isNewReport: boolean, targetReportIndex: number) => {
-		setIsNewReport(isNewReport)
-		setTargetReportIndex(targetReportIndex)
+	const handleModalOpen = (isNewRecord: boolean, targetRecordIndex: number) => {
+		setIsNewExercise(isNewRecord)
+		setTargetExerciseIndex(targetRecordIndex)
 		setIsModalVisible(true)
 	} // 모달 띄우기
 
 	const handleModalClose = () => setIsModalVisible(false) // 모달 닫기
 
 	useEffect(() => {
-		if (axiosMode) getReportHistory();
-	}, [getReportHistory]);
+		if (axiosMode) getExerciseHistory();
+	}, [getExerciseHistory]);
 
 	useEffect(() => {
 		let testMode = true
@@ -168,7 +185,7 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 					<Card.Header style={{ display: "flex" }}>
 						<div className={cx("col-inline")}>
 							<span style={{ fontSize: "30px", paddingLeft: "10px" }}>
-								<strong>리포트 내역</strong>
+								<strong>진료 기록</strong>
 							</span>
 						</div>
 						<div className={`${cx("col-inline")} ${cx("col-inline-right")}`}>
@@ -182,7 +199,7 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 							<div className={cx("section-body")}>
 								<Table 
 									headers={headers} 
-									items={reportHistory} 
+									items={exerciseHistory} 
 									useSelector={true}
 									table_width="calc(100% - 20px)"
 								/>
@@ -190,18 +207,18 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 						</div>
 					</Card.Body>
 				</Card>
-				<ReportHistoryAddModal 
+				<ExerciseHistoryAddModal 
 					show={isModalVisible} 
 					handleClose={handleModalClose} 
-					isNew={isNewReport} 
-					selectedReport={reportHistory ? reportHistory[targetReportIndex] : null}
-					addFunction={postMedicalRecord}
-				></ReportHistoryAddModal>
+					isNew={isNewExercise} 
+					selectedExercise={exerciseHistory ? exerciseHistory[targetExerciseIndex] : null}
+					addFunction={postExerciseHistory}
+				></ExerciseHistoryAddModal>
 			</div> :
 			<div className={cx("section-body")}>
 				<Table 
 					headers={headers} 
-					items={reportHistory} 
+					items={exerciseHistory} 
 					useSelector={true}
 					table_width="calc(100% - 20px)"
 				/>
@@ -211,4 +228,4 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 	)
 }
 
-export default ReportHistory
+export default ExerciseHistory

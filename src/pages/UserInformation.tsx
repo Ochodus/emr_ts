@@ -68,7 +68,7 @@ const getDoctor = async ({
 	}
 };
 
-const UserInformation = () => {
+const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 	const checkAuth = useLocalTokenValidation()
 	const cx = classNames.bind(styles)
 	const navigate = useNavigate()
@@ -103,21 +103,23 @@ const UserInformation = () => {
 	})
 
 	useEffect(() => {
-		getDoctor({
-			setDoctorData,
-			setFirstName,
-			setSecondName,
-			setPhoneN,
-			setEmail,
-			setNewPassword,
-			setSelectedPosition,
-			setSelectedDepartment,
-			config
-		})
+		if (axiosMode) { 
+			getDoctor({
+				setDoctorData,
+				setFirstName,
+				setSecondName,
+				setPhoneN,
+				setEmail,
+				setNewPassword,
+				setSelectedPosition,
+				setSelectedDepartment,
+				config
+			}) 
+		}
 	}, [])
 
 	useEffect(() => {
-		checkAuth(".")
+		if (axiosMode) checkAuth(".")
 	}, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 정보 유효성 검사 수행
 	
 	const formValidationCheck = () => {

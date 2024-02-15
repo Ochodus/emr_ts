@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Table } from "../../../commons/Table";
-import { Card, Button } from "react-bootstrap";
-import { TableHeader } from "../../../commons/Table"
-import { ReportHistoryAddModal } from ".";
+import { Card, Button, InputGroup, Form } from "react-bootstrap";
+import { TableHeader } from "../../../commons/Table";
 import { ReactComponent as AddIcon } from '../../../../assets/add_icon.svg';
 import { useParams } from 'react-router-dom';
 import axios from "axios";
 import { useLocalTokenValidation } from "../../../../api/commons/auth";
-import styles from './ReportHistory.module.css';
+import styles from './Enchiridion.module.css';
 import classNames from 'classnames/bind';
 
 export interface Changes {
@@ -27,7 +26,7 @@ export interface Report {
 	memo: string
 } // Report 객체 타입
 
-const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axiosMode: boolean }) => {
+const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axiosMode: boolean }) => {
 	const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
 	const cx = classNames.bind(styles)
 
@@ -97,11 +96,15 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 		}
 	}, [accessToken])
 
-	const [reportHistory, setReportHistory] = useState<(Report & {id: number})[]>([]);
+	const [reportHistory, setReportHistory] = useState<(Report & {id: number})[]>([])
+	const [enchiridionType, setEnchiridionType] = useState<string | undefined>()
+	const [enchiridionNumber, setEnchiridionNumber] = useState<string | undefined>()
 
 	const [isModalVisible, setIsModalVisible] = useState(false) // 환자 추가/편집 모달 표시 여부
 	const [isNewReport, setIsNewReport] = useState(false) // 모달의 추가/편집 모드
 	const [targetReportIndex, setTargetReportIndex] = useState<number>(-1) // 수정 및 삭제에 사용되는 타깃 환자 인덱스 (로컬 데이터 기준 인덱스 / 환자 고유 아이디와 다름)
+
+	const enchiridionTypes = ["Imoove", "X-Ray"]
 
 	const getReportHistory = useCallback(async () => {
 		try {
@@ -168,7 +171,7 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 					<Card.Header style={{ display: "flex" }}>
 						<div className={cx("col-inline")}>
 							<span style={{ fontSize: "30px", paddingLeft: "10px" }}>
-								<strong>리포트 내역</strong>
+								<strong>자료 선택</strong>
 							</span>
 						</div>
 						<div className={`${cx("col-inline")} ${cx("col-inline-right")}`}>
@@ -178,37 +181,50 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 						</div>
 					</Card.Header>
 					<Card.Body>
-						<div className={cx("section")}>
-							<div className={cx("section-body")}>
-								<Table 
-									headers={headers} 
-									items={reportHistory} 
-									useSelector={true}
-									table_width="calc(100% - 20px)"
-								/>
-							</div>
+						<div className={cx("section")} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid gray" }}>
+							<InputGroup style={{ width: "45%" }}>
+								<InputGroup.Text>자료 타입</InputGroup.Text>
+								<Form.Select
+									value={enchiridionType}
+									onChange={(e) => setEnchiridionType(e.target.value)}
+								>
+									<option key={-1} value={-1}>미지정</option>
+									{enchiridionTypes.map((enchiridionType, index) => {
+										return (
+											<option key={index} value={enchiridionType}>{`${enchiridionType}`}</option>
+										)
+									})}
+								</Form.Select>
+							</InputGroup>
+							<InputGroup style={{ width: "45%" }}>
+								<InputGroup.Text>회차</InputGroup.Text>
+								<Form.Select
+									value={enchiridionType}
+									onChange={(e) => setEnchiridionType(e.target.value)}
+								>
+									<option key={-1} value={-1}>미지정</option>
+									{enchiridionTypes.map((enchiridionType, index) => {
+										return (
+											<option key={index} value={enchiridionType}>{`${enchiridionType}`}</option>
+										)
+									})}
+								</Form.Select>
+							</InputGroup>
+						</div>
+						<div className={cx("section-body")}>
+							<img style={{ width: '100%', height: '500px' }}></img>
 						</div>
 					</Card.Body>
+					<Card.Footer>
+						<Button variant="secondary">편집하기</Button>
+					</Card.Footer>
 				</Card>
-				<ReportHistoryAddModal 
-					show={isModalVisible} 
-					handleClose={handleModalClose} 
-					isNew={isNewReport} 
-					selectedReport={reportHistory ? reportHistory[targetReportIndex] : null}
-					addFunction={postMedicalRecord}
-				></ReportHistoryAddModal>
 			</div> :
 			<div className={cx("section-body")}>
-				<Table 
-					headers={headers} 
-					items={reportHistory} 
-					useSelector={true}
-					table_width="calc(100% - 20px)"
-				/>
 			</div>
 			}
 		</div>
 	)
 }
 
-export default ReportHistory
+export default Enchiridion

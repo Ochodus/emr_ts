@@ -162,3 +162,41 @@ td:has(.entry-wrapper.entry-contents) {
 td:has(.entry) {
     vertical-align: middle;
 }
+
+.cell.large {
+    width: 100%;
+    padding-right: 10px;
+}
+
+.chartInput {
+    height: 80px;
+    justify-content: center;
+}
+
+.chartValueInput>input {
+    margin: auto;
+    margin-bottom: 5px;
+    border-bottom: 1px solid gray;
+}
+
+.chartMinMaxInput {
+    display: flex;
+    justify-content: center;
+}
+
+.chartMinMaxInput>input {
+    border-bottom: 1px solid gray;
+}
+
+.inline.chart {
+    display: flex;
+}
+
+.chartPercentageInput>input {
+    margin: auto;
+    border-bottom: 1px solid gray;
+}
+
+.charInput.misc {
+    display: block;
+}

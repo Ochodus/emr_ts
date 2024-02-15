@@ -302,20 +302,20 @@ const renderSelected = async (cv: any, maskTemplate: number, isMasked: boolean, 
           }
         })
         .catch(e => {
-          console.warn('requestWithFile error', e.response)
+          console.warn('requestWithFile error', e)
         })
     })
   }
   
-  function masking(cv: any, template: number, indicator: string | undefined) {
+  function masking(cv: any, template: number, indicator: string = '1') {
     // inbody체성분,  inbdoy체수분, exbody, lookin' body 순
     const x_min = [62, 65, 5,  65]
-    const x_max = [761, 760, 505, 410]
+    const x_max = [761, 760, 505, 270]
   
     const y_min = [160, 155, 65, 75]
     const y_max = [282, 260, 100, 115]
-  
-    let img = cv.imread(`ocr_original-${indicator}`)
+
+    let img = cv.imread(`ocr_original-${indicator ?? ""}`)
   
     let topLeft = new cv.Point(x_min[template], y_min[template])
     let bottomRight = new cv.Point(x_max[template], y_max[template])

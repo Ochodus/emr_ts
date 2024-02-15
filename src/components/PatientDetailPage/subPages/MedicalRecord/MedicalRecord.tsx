@@ -21,7 +21,7 @@ export interface MedicalRecord {
 	diastolic_blood_pressure: number
 } // MedicalRecord 객체 타입
 
-const MedicalRecord = ({ isSummaryMode }: { isSummaryMode: boolean }) => {
+const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axiosMode: boolean }) => {
 	const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
 	const cx = classNames.bind(styles)
 
@@ -119,6 +119,7 @@ const MedicalRecord = ({ isSummaryMode }: { isSummaryMode: boolean }) => {
 		try {
 			isNewRecord || !medicalRecords ? await axios.post(url, newMedicalRecord, config) : await axios.patch(`${url}/${medicalRecords[targetRecordIndex].id}`, newMedicalRecord, config)
 		  	console.log("진료 기록 추가 성공");
+			getMedicalRecord();
 		} catch (error) {
 		  	console.error("진료 기록 추가 중 오류 발생:", error);
 		}
@@ -148,12 +149,12 @@ const MedicalRecord = ({ isSummaryMode }: { isSummaryMode: boolean }) => {
 	const handleModalClose = () => setIsModalVisible(false) // 모달 닫기
 
 	useEffect(() => {
-		getMedicalRecord();
+		if (axiosMode) getMedicalRecord();
 	}, [getMedicalRecord]);
 
 	useEffect(() => {
 		let testMode = true
-		if (process.env.NODE_ENV !== 'development' || testMode) checkAuth()
+		if ((process.env.NODE_ENV !== 'development' || testMode) && axiosMode) checkAuth()
 	  }, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
 
 	return (
@@ -192,6 +193,7 @@ const MedicalRecord = ({ isSummaryMode }: { isSummaryMode: boolean }) => {
 					isNew={isNewRecord} 
 					selectedMedicalRecord={medicalRecords ? medicalRecords[targetRecordIndex] : null}
 					addFunction={postMedicalRecord}
+					axiosMode={axiosMode}
 				></MedicalRecordAddModal>
 			</div> :
 			<div className={cx("section-body")}>

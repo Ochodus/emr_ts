@@ -15,41 +15,9 @@ import { ReactComponent as AddIcon } from '../assets/add_icon.svg';
 import { useLocalTokenValidation } from "../api/commons/auth";
 import styles from './PatientsTablePage.module.css';
 import classNames from 'classnames/bind';
+import { Patient } from "../interfaces";
 
-interface Nok {
-	type?: string,
-	first_name: string,
-	last_name: string,
-	sex: string,
-	birthday: string,
-	tel: string,
-	address: string,
-	address_detail?: string,
-	post_number: number
-}
-
-export interface Patient {
-	birthday: string,
-	first_name: string,
-	last_name: string,
-	sex: string,
-	height?: number,
-	weight?: number,
-	highBp?: number,
-	lowBp?: number,
-	last_recorded?: Date,
-	regDate?: Date,
-	tel: string,
-	address: string,
-	address_detail?: string,
-	post_number: number,
-	user_id: number,
-	social_number: number,
-	memo?: string,
-	noks: Nok[]
-} // Patient 객체 타입
-
-const PatientsTablePage = () => {
+const PatientsTablePage = ({axiosMode}: {axiosMode: boolean}) => {
 	const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
 	const navigate = useNavigate()
 	const cx = classNames.bind(styles)
@@ -70,7 +38,7 @@ const PatientsTablePage = () => {
 		{ 
 			Header: "환자번호",
 			accessor: "id",
-			width: 40
+			width: 100
 		},
 		{
 			Header: "이름",
@@ -80,7 +48,7 @@ const PatientsTablePage = () => {
 					{row.original.last_name}{row.original.first_name} 
 				</div>
 			),
-			width: 40
+			width: 100
 		},
 		{
 			Header: "주민번호",
@@ -90,22 +58,22 @@ const PatientsTablePage = () => {
 					{row.original.birthday ? row.original.birthday.replaceAll('-', '').slice(2) : row.original.birthday}-{row.original.social_number} 
 				</div>
 			),
-			width: 120
+			width: 100
 		},
 		{
 			Header: "휴대폰",
 			accessor: "tel",
-			width: 80
+			width: 100
 		},
 		{
 			Header: "최종내원일",
 			accessor: "last_recorded",
-			width: 50
+			width: 100
 		},
 		{
 			Header: "주소",
 			accessor: "address",
-			width: 200
+			width: 100
 		},
 		{
 			Header: "메모",
@@ -203,12 +171,12 @@ const PatientsTablePage = () => {
 	} // 환자 상세보기
 
 	useEffect(() => {
-		getAllPatients()
+		if (axiosMode) getAllPatients()
 	}, [getAllPatients]) // 페이지 첫 렌더링 시 테이블 초기화
 
 	useEffect(() => {
 		let testMode = true
-		if (process.env.NODE_ENV !== 'development' || testMode) checkAuth().then((resolvedData) => {
+		if ((process.env.NODE_ENV !== 'development' || testMode) && axiosMode) checkAuth().then((resolvedData) => {
 		  setIsLogin(resolvedData)
 		})
 	  }, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사

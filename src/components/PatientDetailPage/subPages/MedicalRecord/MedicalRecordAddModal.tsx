@@ -11,10 +11,11 @@ import { MedicalRecord } from './MedicalRecord'
 
 interface MedicalRecordAddModalProps {
     show: boolean, 
-    isNew: boolean
+    isNew: boolean,
     selectedMedicalRecord: MedicalRecord | null,
-    addFunction: (newMedicalRecord: MedicalRecord, isNew: boolean) => void
-    handleClose: () => void, 
+    addFunction: (newMedicalRecord: MedicalRecord, isNew: boolean) => void,
+    handleClose: () => void,
+    axiosMode: boolean
 }
 
 const symptomsList: string[] = [
@@ -41,7 +42,7 @@ const diagnosticsList: string[] = [
     "광견병"
 ]
 
-const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord: selectedMedicalRecord, addFunction, handleClose }: MedicalRecordAddModalProps) => {
+const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord: selectedMedicalRecord, addFunction, handleClose, axiosMode }: MedicalRecordAddModalProps) => {
     const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
     const cx = classNames.bind(styles);
 
@@ -114,8 +115,7 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord: selectedMed
     }
 
     useEffect(() => {
-		let testMode = true
-		if (process.env.NODE_ENV !== 'development' || testMode) checkAuth()
+		if (process.env.NODE_ENV !== 'development' && axiosMode) checkAuth()
 	  }, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
 
     return (
