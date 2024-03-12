@@ -28,13 +28,26 @@ const FlatWalkingVideoAddModal = ({show, handleClose, isNew=false, cv}: { show: 
 
     const [exDate, setExDate] = useState(new Date())
     const [podoscopeNote, setPodoscopeNote] = useState("")
+    const [file, setFile] = useState<File>()
 
     const renderSelected = () => {
     }
 
     const addNewPodoscope = async () => {
+        let file_url = ""
+        try {
+            let formData = new FormData()
+            formData.append('file', file ?? "")
+            let response = await axios.post('/api/file', formData, config)
+            file_url = response.data.file_path
+            console.log(`InBody 파일 추가 성공: ${file_url}`);
+        } catch (error) {
+            console.error("InBody 파일 추가 중 오류 발생:", error)
+            return
+        }
+
         const newPodoscope = {
-            file_url: "",
+            file_url: file_url,
             inspected: dateParse(exDate),
             content: null,
             detail: podoscopeNote
@@ -67,7 +80,7 @@ const FlatWalkingVideoAddModal = ({show, handleClose, isNew=false, cv}: { show: 
                                 <div className={`${cx("cell")} ${cx("large")}`}>
                                 <Form.Control
                                     type="file" 
-                                    onChange={(e) => {}}
+                                    onChange={(e: any) => setFile(e.target.files[0])}
                                 />
                                 </div>
                             </div>

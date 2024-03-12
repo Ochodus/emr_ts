@@ -1,146 +1,70 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Card from 'react-bootstrap/Card'
 import { MedicalRecord } from '../MedicalRecord'
-import { ResponsiveBump } from '@nivo/bump';
+import { ResponsiveLine } from '@nivo/line';
 import axios from 'axios'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'react-date-range-ts/dist/styles.css';
 import 'react-date-range-ts/dist/theme/default.css';
 import styles from './SummaryContainer.module.css';
 import classNames from 'classnames/bind';
+import { useParams } from "react-router-dom";
+import { get } from "http";
 
-
+interface GraphData {
+  [index: string]: string | {x: number, y: number}[]
+  id: string;
+  data: {
+      x: number;
+      y: number;
+  }[];
+}
 
 const SummaryCard = ({type, axiosMode}: {type: string, axiosMode: boolean}) => {
-    const patient_id=4
-    const [curPatientRecordData, setCurPatientRecordData] = useState()
-    const cx = classNames.bind(styles);
+    const { patient_id } = useParams()
+    const cx = classNames.bind(styles)
 
-    const getPatientRecords = async () => {
+    const accessToken = JSON.parse(JSON.parse(window.localStorage.getItem("persist:auth") ?? "")?.token ?? "")
+    const config = {
+      headers: {
+        Authorization: "Bearer " + accessToken,
+      },
+    }
 
-      const accessToken = JSON.parse(JSON.parse(window.localStorage.getItem("persist:auth") ?? "")?.token ?? "")
-      
-      let config = {
-        headers: {
-          Authorization: "Bearer " + accessToken,
-        },
-      };
+    const [graphData, setGraphData] = useState<GraphData[]>([])
 
-      console.log(patient_id)
-  
+    const getData = async (url: string, parseFunction: (rawData: any) => GraphData) => {
       try {
-        // `/patients?${minParam}=${min}&${maxParam}=${max}&offset=0&count=2`
         const response = await axios.get(
-          
-          `/api/patients/${patient_id}/medical/records`,
+          url,
           config
-        );
-  
-        setCurPatientRecordData(response.data)
-  
-        console.log(response.data);
+        )
+          
+        setGraphData([parseFunction(response.data)])
       } catch (error) {
-        console.error("환자 조회 중 오류 발생:", error);
+        console.error("데이터 조회 중 오류 발생:", error);
       }
-    };
+    }
 
-    const headers = useMemo(
-        () => [
-          {
-            Header: "진료 ID",
-            accessor: "record_id",
-            width: 80
-          },
-          {
-            Header: "진료 날짜",
-            accessor: "record_date",
-            width: 80
-          },
-          {
-            Header: "증상",
-            accessor: "sympotms",
-            width: 80
-          },
-          {
-            Header: "진단",
-            accessor: "diagnotics",
-            width: 80
-          },
-          {
-            Header: "처방",
-            accessor: "precriptions",
-            width: 80
-          },
-          {
-            Header: "비고",
-            accessor: "note",
-            width: 80
-          },
-        ],
-        []
-    )
+    const getWeightData = (rawData: any) => {
+      let data = []
+      for (let index in rawData) {
+        data.push({"x": +index, "y": rawData[index].weight})
+      }
+      return { "id": "weight", "data": data }
+    }
 
-    const items = useMemo(
-        () => 
-          [
-          {
-            record_id: "15512",
-            record_date: "2002.05.17",
-            symptoms: "기침, 가래, 콧물",
-            diagnotics: "감기",
-            prescriptions: "약 두 개",
-            note: "임상실험용",
-          },
-          {
-            record_id: "15662",
-            record_date: "2002.05.17",
-            symptoms: "기침, 가래, 콧물",
-            diagnotics: "감기",
-            prescriptions: "약 두 개",
-            note: "임상실험용",
-          },
-          {
-            record_id: "15512",
-            record_date: "2002.05.17",
-            symptoms: "기침, 가래, 콧물",
-            diagnotics: "감기",
-            prescriptions: "약 두 개",
-            note: "임상실험용",
-          },
-        ],
-        []
-    )
-
-    const data = [
-        {
-          "id": "Serie 1",
-          "data": [
-            {
-              "x": 2000,
-              "y": 7
-            },
-            {
-              "x": 2001,
-              "y": 1
-            },
-            {
-              "x": 2002,
-              "y": 1
-            },
-            {
-              "x": 2003,
-              "y": 5
-            },
-            {
-              "x": 2004,
-              "y": 5
-            }
-          ]
-        }
-    ]
+    const getSSMData = (rawData: any) => {
+      let data = []
+      for (let index in rawData) {
+        data.push({"x": +index, "y": rawData[index].skeletal_muscels_fat.skeletal_muscles})
+      }
+      return { "id": "weight", "data": data }
+    }
 
     useEffect(() => {
-      if (axiosMode) getPatientRecords();
+      if (type === "Weight") getData(`/api/patients/${patient_id}/medical/physical_exam`, getWeightData)
+      if (type === "SSM") getData(`/api/patients/${patient_id}/medical/inspections?inspection_type=INBODY`, getSSMData)
     }, [])
 
     return (
@@ -148,34 +72,26 @@ const SummaryCard = ({type, axiosMode}: {type: string, axiosMode: boolean}) => {
             {
                 type === "진료 기록"
                 ?   <MedicalRecord isSummaryMode axiosMode={axiosMode}></MedicalRecord>
-                :   type === "SMM" ?
-                    <ResponsiveBump
-                        data={data}
-                        colors={{ scheme: 'spectral' }}
-                        lineWidth={3}
-                        activeLineWidth={6}
-                        inactiveLineWidth={3}
-                        inactiveOpacity={0.15}
-                        pointSize={10}
-                        activePointSize={16}
-                        inactivePointSize={0}
-                        pointColor={{ theme: 'background' }}
-                        pointBorderWidth={3}
-                        activePointBorderWidth={3}
-                        pointBorderColor={{ from: 'serie.color' }}
-                        axisTop={{
-                            tickSize: 5,
-                            tickPadding: 5,
-                            tickRotation: 0,
-                            legend: '',
-                            legendPosition: 'middle',
-                            legendOffset: -36
+                :   type === "Weight" ?
+                    <ResponsiveLine
+                        data={graphData}
+                        margin={{ top: 20, right: 50, bottom: 50, left: 60 }}
+                        xScale={{ type: 'point' }}
+                        yScale={{
+                          type: 'linear',
+                          min: 'auto',
+                          max: 'auto',
+                          stacked: true,
+                          reverse: false
                         }}
+                        yFormat=" >-.2f"
+                        axisTop={null}
+                        axisRight={null}
                         axisBottom={{
                             tickSize: 5,
                             tickPadding: 5,
                             tickRotation: 0,
-                            legend: "",
+                            legend: "회차",
                             legendPosition: 'middle',
                             legendOffset: 32
                         }}
@@ -183,12 +99,17 @@ const SummaryCard = ({type, axiosMode}: {type: string, axiosMode: boolean}) => {
                             tickSize: 5,
                             tickPadding: 5,
                             tickRotation: 0,
-                            legend: 'ranking',
+                            legend: '몸무게',
                             legendPosition: 'middle',
                             legendOffset: -40
                         }}
-                        margin={{ top: 40, right: 100, bottom: 40, left: 60 }}
-                        axisRight={null}
+                        pointSize={10}
+                        pointColor={{ theme: 'background' }}
+                        pointBorderWidth={2}
+                        pointBorderColor={{ from: 'serieColor' }}
+                        pointLabelYOffset={-12}
+                        enableCrosshair={true}
+                        useMesh={true}
                     />
                 : null
             }

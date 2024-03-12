@@ -14,6 +14,7 @@ interface OcrParserProps {
   type: number,
   isMask: boolean,
   setOcrResult: (result: any) => void,
+  setFile: (file: File) => void,
   cv: any,
   smallSize: boolean,
   indicator: number
@@ -21,7 +22,7 @@ interface OcrParserProps {
 
 const PDFJS: any = require('pdfjs-dist');
 
-const OcrParser = ({ type=0, isMask=true, setOcrResult, cv, smallSize=false, indicator=0 }: OcrParserProps) => {
+const OcrParser = ({ type=0, isMask=true, setOcrResult, setFile, cv, smallSize=false, indicator=0 }: OcrParserProps) => {
     const [show, setShow] = useState(false) // 미리보기 확대 모달 display 컨트롤
     const [showEditor, setShowEditor] = useState(false) // 마스킹 설정 모달 display 컨트롤
   
@@ -94,7 +95,7 @@ const OcrParser = ({ type=0, isMask=true, setOcrResult, cv, smallSize=false, ind
                 <Form.Control
                     type="file" 
                     id={`ocr-target-${indicator}`}
-                    onChange={(e) => {renderSelected(cv, maskTemplate, isMasked, e, `${indicator}`); setDisabled(false)}}
+                    onChange={(e) => {renderSelected(cv, maskTemplate, isMasked, e, `${indicator}`, setFile); setDisabled(false);}}
                 />
                 <Button onClick={() => {requestWithFile(cv, isMasked, setOcrResult, `${indicator}`); setDisabled(true)}}>인식하기</Button>
             </InputGroup>
@@ -186,8 +187,9 @@ const OcrParser = ({ type=0, isMask=true, setOcrResult, cv, smallSize=false, ind
 }
   
   // Display selected image by input element
-const renderSelected = async (cv: any, maskTemplate: number, isMasked: boolean, e: any, indicator: string) => {
-    const file = e.target.files[0]
+const renderSelected = async (cv: any, maskTemplate: number, isMasked: boolean, e: any, indicator: string, setFile: (file: File) => void) => {
+    let file = e.target.files[0]
+    setFile(file)
     const ocr_original = document.getElementById(`ocr_original-${indicator}`) as any
 
     if (!ocr_original) return

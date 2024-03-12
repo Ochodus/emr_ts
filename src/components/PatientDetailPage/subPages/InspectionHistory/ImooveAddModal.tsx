@@ -10,7 +10,41 @@ import { useParams } from 'react-router-dom'
 import axios from 'axios'
 import { useDateTimeParser } from '../../../../api/commons/dateTimeParse'
 
-const ImooveAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, handleClose: () => void, isNew?: boolean, cv: any }) => {
+export interface Imoove {
+    file_url: string,
+    inspected: string,
+    content: {
+        type: string,
+        strength: number,
+        code: string,
+        time: number,
+        sensitivity: number,
+        supports: {
+            stability: number,
+            distribution: {
+                denominator: number,
+                numerator: number,
+                points: number
+            }
+        },
+        trunk: {
+            stability: number,
+            distribution: {
+                denominator: number,
+                numerator: number,
+                points: number
+            }
+        },
+        postural_coordination: {
+            value: number,
+            point: number
+        },
+        postural_strategy: number
+    },
+    detail: string
+}
+
+const ImooveAddModal = ({show, handleClose, isNew=true, selectedImoove=null, cv}: { show: boolean, handleClose: () => void, isNew?: boolean, selectedImoove?: Imoove & {id: number} | null, cv: any }) => {
     const cx = classNames.bind(styles);
     const dateParse = useDateTimeParser()
 
@@ -48,6 +82,10 @@ const ImooveAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, h
     const [posturalPoints, setPosturalPoints] = useState("")
     const [posturalStrategy, setPosturalStrategy] = useState("")
 
+    const [memo, setMemo] = useState("")
+
+    const [file, setFile] = useState<File>()
+
     const onChangeOcrResult = (result: any) => {
         setStrength(result['strength'])
         setCode(result['code'])
@@ -74,47 +112,83 @@ const ImooveAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, h
     }
 
     const renderSelected = () => {
+        if (selectedImoove) {
+            console.log(selectedImoove)
+            setStrength(`${selectedImoove.content.strength}`)
+            setCode(`${selectedImoove.content.code}`)
+            setDuration(`${selectedImoove.content.time}`)
+            setSensitivity(`${selectedImoove.content.sensitivity}`)
+            setExDate(new Date(selectedImoove.inspected))
+            
+            setSupportStability(`${selectedImoove.content.supports.stability}`)
+            setSupportDistributionL(`${selectedImoove.content.supports.distribution.denominator}`)
+            setSupportDistributionR(`${selectedImoove.content.supports.distribution.numerator}`)
+            setSupportPoints(`${selectedImoove.content.supports.distribution.points}`)
+
+            setTrunkStability(`${selectedImoove.content.trunk.stability}`)
+            setTrunkDistributionL(`${selectedImoove.content.trunk.distribution.denominator}`)
+            setTrunkDistributionR(`${selectedImoove.content.trunk.distribution.numerator}`)
+            setTrunkPoints(`${selectedImoove.content.trunk.distribution.points}`)
+
+            setPosturalCoordination(`${selectedImoove.content.postural_coordination.value}`)
+            setPosturalPoints(`${selectedImoove.content.postural_coordination.point}`)
+            setPosturalStrategy(`${selectedImoove.content.postural_strategy}`)
+
+            setMemo(`${selectedImoove.detail}`)
+        }
     }
 
     const addNewImoove = async () => {
-        const newImooveRecord = {
-            file_url: "",
+        let file_url = ""
+        try {
+            let formData = new FormData()
+            formData.append('file', file ?? "")
+            let response = await axios.post('/api/file', formData, config)
+            file_url = response.data.file_path
+            console.log(`InBody 파일 추가 성공: ${file_url}`);
+        } catch (error) {
+            console.error("InBody 파일 추가 중 오류 발생:", error)
+            return
+        }
+
+        const newImooveRecord: Imoove = {
+            file_url: file_url,
             inspected: dateParse(exDate),
             content: {
                 type: imooveType,
-                strength: strength,
+                strength: +strength,
                 code: code,
-                time: duration,
-                sensitivity: sensitivity,
+                time: +duration,
+                sensitivity: +sensitivity,
                 supports: {
-                    stability: supportStability,
+                    stability: +supportStability,
                     distribution: {
-                        denominator: supportDistributionR,
-                        numerator: supportDistributionL,
-                        points: supportPoints
+                        denominator: +supportDistributionR,
+                        numerator: +supportDistributionL,
+                        points: +supportPoints
                     }
                 },
                 trunk: {
-                    stability: trunkStability,
+                    stability: +trunkStability,
                     distribution: {
-                        denominator: trunkDistributionR,
-                        numerator: trunkDistributionL,
-                        points: trunkPoints
+                        denominator: +trunkDistributionR,
+                        numerator: +trunkDistributionL,
+                        points: +trunkPoints
                     }
                 },
                 postural_coordination: {
-                    value: posturalCoordination,
-                    point: posturalPoints
+                    value: +posturalCoordination,
+                    point: +posturalPoints
                 },
-                postural_strategy: posturalStrategy
+                postural_strategy: +posturalStrategy
             },
-            detail: ""
+            detail: memo
         }
         try {
-            await axios.post(url, newImooveRecord, config)
-                console.log("InBody 검사 기록 추가 성공");
+            isNew ? await axios.post(url, newImooveRecord, config) : await axios.patch(`${url}/${selectedImoove?.id}`, newImooveRecord, config)
+                console.log("Imoove 검사 기록 추가 성공")                
         } catch (error) {
-                console.error("InBody 검사 기록 추가 중 오류 발생:", error);
+                console.error("Imoove 검사 기록 추가 중 오류 발생:", error)
         }
     }
 
@@ -142,7 +216,8 @@ const ImooveAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, h
                                     <OcrParser 
                                     type={0} 
                                     isMask={false} 
-                                    setOcrResult={onChangeOcrResult} 
+                                    setOcrResult={onChangeOcrResult}
+                                    setFile={setFile}
                                     smallSize={false}
                                     cv={cv}
                                     indicator={0}
@@ -416,6 +491,26 @@ const ImooveAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, h
                                 </div>
                             </div>
                         </div>
+                        <div className={cx("group-field")}> 
+                            <div className={cx("group-title")}>
+                                <span>비고</span>
+                            </div>
+                            <div className={cx("group-content")}>
+                                <div className={cx("inline")}>
+                                    <div className={`${cx("cell")}`}>
+                                        <InputGroup>
+                                            <InputGroup.Text>메모</InputGroup.Text>
+                                            <Form.Control
+                                                as="textarea"
+                                                rows={3}
+                                                value={memo}
+                                                onChange={(e) => setMemo(e.target.value)}
+                                            />
+                                        </InputGroup>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>    
                     </div>
                 </div>
             </Modal.Body>

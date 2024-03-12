@@ -15,9 +15,9 @@ interface StringValue {value: string}
 interface NumberValue {value: {start: number, end: number}}
 interface DateValue {value: {start: Date, end: Date}}
 
-type StringFilterBuffer = FilterBuffer & StringValue
-type NumberFilterBuffer = FilterBuffer & NumberValue
-type DateFilterBuffer = FilterBuffer & DateValue
+export type StringFilterBuffer = FilterBuffer & StringValue
+export type NumberFilterBuffer = FilterBuffer & NumberValue
+export type DateFilterBuffer = FilterBuffer & DateValue
 
 interface Filters {
     count: number,
@@ -90,7 +90,7 @@ const counter = createReducer(initialState, (builder) => {
             }
         })
         .addCase(addFilter, (state, action) => {
-            state.filters.push(action.payload)
+            if (action.payload.value !== "" && action.payload.label !== "") state.filters.push(action.payload)
         })
         .addCase(removeFilter, (state, action) => {
             for (let i of state.filters) {

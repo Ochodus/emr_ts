@@ -7,7 +7,9 @@ import Multiselect from 'multiselect-react-dropdown'
 import { useLocalTokenValidation } from '../../../../api/commons/auth'
 import styles from './ReportHistoryAddModal.module.css'
 import classNames from 'classnames/bind'
-import { Report } from './ReportHistory'
+import { Changes, Report } from './ReportHistory'
+import { Table } from '../../../commons'
+import { TableHeader } from '../../../commons/Table'
 
 interface ReportAddModalProps {
     show: boolean, 
@@ -37,12 +39,64 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport: selectedReport, ad
 		}
 	}, [accessToken])
 
+    const headers: TableHeader = [
+		{ 
+			Header: "치료 종류",
+			accessor: "name",
+			width: 100
+		},
+        { 
+			Header: "치료 전 회차/수치",
+            accessor: "befor_value",
+			Cell: ({ row }) => (
+				<div>
+					{`${row.original.before_trial}/${row.original.before_value}`}
+				</div>
+			),
+			width: 100
+		},
+        { 
+			Header: "치료 후 회차/수치",
+			accessor: "content",
+			Cell: ({ row }) => (
+				<div>
+					{`${row.original.after_trial}/${row.original.after_value}`}
+				</div>
+			),
+			width: 100
+		},
+		{
+			Header: "향상 여부",
+			accessor: "is_improved",
+			width: 100
+		}
+	] // 환자 목록 테이블 헤더 선언
+
+    const reportData = [
+        {
+            name: "슈로스 치료",
+            before_value: 0,
+            before_trial: 1,
+            after_value: 15,
+            after_trial: 10,
+            is_improved: true
+        },
+        {
+            name: "장기 이식",
+            before_value: 5,
+            before_trial: 1,
+            after_value: 555,
+            after_trial: 10,
+            is_improved: true
+        },
+    ]
+
     const [selectedTherapies, setSelectedTherapies] = useState<string[]>([])
     const [startDate, setStartDate] = useState(new Date().toLocaleDateString('en-CA'))
     const [endDate, setEndDate] = useState(new Date().toLocaleDateString('en-CA'))
-    const [startTrial, setStartTrial] = useState(-1)
-    const [endTrial, setEndTrial] = useState(-1)
-    const [changes, setChanges] = useState([])
+    const [startTrial, setStartTrial] = useState("")
+    const [endTrial, setEndTrial] = useState("")
+    const [changes, setChanges] = useState<Changes[]>(reportData)
     const [changeDetail, setChangeDetail] = useState<object>()
     const [memo, setMemo] = useState("")
 
@@ -92,15 +146,15 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport: selectedReport, ad
             <Modal.Body>
                 <div className={cx("contents")}>
                     <div className={cx("page-title")}>
-                        <span>변화 항목</span>
+                        <span>조건</span>
                     </div>
                     <div className={cx("page-content")}>
                         <div className={cx("group-field")}> 
                             <div className={cx("group-content")}>
                                 <div className={cx("inline")}>
                                     <div className={`${cx("cell")} ${cx("large")}`}>
-                                        <InputGroup>
-                                            <InputGroup.Text>치료 방법 선택</InputGroup.Text>
+                                        <InputGroup style={{ flexWrap: "nowrap" }}>
+                                            <InputGroup.Text>치료</InputGroup.Text>
                                             <Multiselect
                                                 isObject={false}
                                                 options={therapyList}
@@ -122,10 +176,10 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport: selectedReport, ad
                                                 type="number"
                                                 placeholder="시작 회차"
                                                 value={startTrial}
-                                                onChange={(e) => setStartTrial(+e.target.value)}
+                                                onChange={(e) => setStartTrial(e.target.value)}
                                             >
                                             </Form.Control>
-                                            <InputGroup.Text>cm</InputGroup.Text>
+                                            <InputGroup.Text>회</InputGroup.Text>
                                         </InputGroup>
                                     </div>
                                     <div className={`${cx("cell")} ${cx("small")}`}>
@@ -135,13 +189,41 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport: selectedReport, ad
                                                 type="number"
                                                 placeholder="마지막 회차"
                                                 value={endTrial}
-                                                onChange={(e) => setEndTrial(+e.target.value)}
+                                                onChange={(e) => setEndTrial(e.target.value)}
                                             >
                                             </Form.Control>
-                                            <InputGroup.Text>kg</InputGroup.Text>
+                                            <InputGroup.Text>회</InputGroup.Text>
                                         </InputGroup>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className={cx("page-title")}>
+                        <span>변화 항목</span>
+                    </div>
+                    <div className={cx("page-content")}>
+                        <div className={cx("group-field")}> 
+                            <div className={cx("group-content")}>
+                                <div className={cx("inline")}>
+                                    <div className={`${cx("cell")} ${cx("large")}`}>
+                                    <Table 
+                                        headers={headers} 
+                                        items={changes} 
+                                        useSelector={true}
+                                        table_width="calc(100% - 20px)"
+                                    />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className={cx("page-title")}>
+                        <span>기타</span>
+                    </div>
+                    <div className={cx("page-content")}>
+                        <div className={cx("group-field")}> 
+                            <div className={cx("group-content")}>
                                 <div className={cx("inline")}>
                                     <div className={`${cx("cell")}`}>
                                         <InputGroup>

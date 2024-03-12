@@ -9,16 +9,13 @@ import axios from "axios";
 import { useLocalTokenValidation } from "../../../../api/commons/auth";
 import styles from './MedicalRecord.module.css';
 import classNames from 'classnames/bind';
+import { PhysicalExam } from "../../../../interfaces";
 
 export interface MedicalRecord {
 	symptoms: string[],
 	diagnostics: string[],
 	memo: string,
 	recorded: string,
-	height: number,
-	weight: number,
-	systolic_blood_pressure: number,
-	diastolic_blood_pressure: number
 } // MedicalRecord 객체 타입
 
 const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axiosMode: boolean }) => {
@@ -125,6 +122,15 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 		}
 	}
 
+	const postPhysicalExam = async (newPhysicalExam: PhysicalExam) => {
+		try {
+			await axios.post(`/api/patients/${patient_id}/medical/physical_exam`, newPhysicalExam, config)
+		  	console.log("기본 사항 갱신");
+		} catch (error) {
+		  	console.error("기본 사항 갱신 중 오류 발생:", error);
+		}
+	}
+
 	const deleteMedicalRecord = async (targetRecordIndex: number) => {
 		if (medicalRecords) {
 			let targetId = medicalRecords[targetRecordIndex].id
@@ -135,7 +141,7 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 				)
 				getMedicalRecord()
 			} catch (error) {
-				console.error("환자 삭제 중 오류 발생:", error)
+				console.error("진료기록 삭제 중 오류 발생:", error)
 			}
 		}
 	} // 환자 삭제
@@ -192,7 +198,8 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 					handleClose={handleModalClose} 
 					isNew={isNewRecord} 
 					selectedMedicalRecord={medicalRecords ? medicalRecords[targetRecordIndex] : null}
-					addFunction={postMedicalRecord}
+					addRecord={postMedicalRecord}
+					addPhysicalExam={postPhysicalExam}
 					axiosMode={axiosMode}
 				></MedicalRecordAddModal>
 			</div> :

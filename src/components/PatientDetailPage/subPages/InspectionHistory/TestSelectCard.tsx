@@ -18,7 +18,7 @@ import AlignmentAddModal from "./AlignmentAddModal";
 import FlatWalkingVideoAddModal from "./FlatWalkingVideoAddModal";
 
 
-const TestSelectCard = ({ type }: { type: string }) => {
+const TestSelectCard = ({ type, handleHistoryShow }: { type: string, handleHistoryShow: (value: string) => void }) => {
     const [show, setShow] = useState(false)
     const [showAdult, setShowAdult] = useState(false)
     const [showChild, setShowChild] = useState(false)
@@ -42,19 +42,21 @@ const TestSelectCard = ({ type }: { type: string }) => {
         setShow(false)
         setShowChild(true)
     }
+
+    
     
     const cx = classNames.bind(styles);
 
     return (
             <Card>
-                <Card.Img variant="top" src="holder/s" style={{ width: "100%", height: "180px" }}/>
+                <Card.Img variant="top" src={`${process.env.PUBLIC_URL}/images/inspectionIcon/${type}.png`} alt="" style={{ width: "100%", height: "180px", objectFit: "contain" }}/>
                 <Card.Body>
                 <div className={cx("testName")}>{type}</div>
                 <div className={cx("lastUpdate")}>마지막 검사 일자: {"미실시"}</div>
                 </Card.Body>
                 <Card.Footer>
                     <Button style={{ width: "45%" }} onClick={handleShow}>추가</Button>
-                    <Button variant="secondary" style={{ width: "45%", float: "right" }} >기록 확인</Button>
+                    <Button variant="secondary" onClick={(e) => handleHistoryShow(type)} style={{ width: "45%", float: "right" }} >기록 확인</Button>
                 </Card.Footer>
                 { type === "IMOOVE" && 
                     <ImooveAddModal cv={cv}
@@ -69,7 +71,7 @@ const TestSelectCard = ({ type }: { type: string }) => {
                     />
                 }
                 { type === "X-Ray" &&
-                    <XRayAddModal cv={cv}
+                    <XRayAddModal
                         show={show} 
                         handleClose={handleClose} 
                     />

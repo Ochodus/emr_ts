@@ -30,6 +30,7 @@ export const useLocalTokenValidation = () => {
 
             return true
         } catch (error) {
+            console.log("dd")
             navigate('/login')
             return false
         }

@@ -11,17 +11,18 @@ import styles from './ExerciseHistory.module.css';
 import classNames from 'classnames/bind';
 
 export interface Trial {
-	therapist: string,
-	exercise: string,
-	time: string,
-	sets: number,
-	count_per_set: number
+	therapist?: string,
+	exercise?: string,
+	time_ms?: string,
+	sets?: number,
+	count_per_set?: number,
+	area?: string
 }
 
 export interface Exercise {
 	progressed: string,
-	total_time: string,
-	trial_exercises: Trial[],
+	total_time_ms: string,
+	trial_exercises: (Trial | {})[],
 	memo: string,
 } // MedicalRecord 객체 타입
 
@@ -59,6 +60,7 @@ const ExerciseHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean,
 			accessor: "details",
 			Cell: ({ row }) => (
 				<div>
+					{ JSON.stringify(row.original.trial_exercises) }
 				</div>
 			),
 			width: 40
@@ -185,7 +187,7 @@ const ExerciseHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean,
 					<Card.Header style={{ display: "flex" }}>
 						<div className={cx("col-inline")}>
 							<span style={{ fontSize: "30px", paddingLeft: "10px" }}>
-								<strong>진료 기록</strong>
+								<strong>운동치료 내역</strong>
 							</span>
 						</div>
 						<div className={`${cx("col-inline")} ${cx("col-inline-right")}`}>

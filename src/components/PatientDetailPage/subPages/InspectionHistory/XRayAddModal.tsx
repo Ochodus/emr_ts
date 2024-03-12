@@ -9,7 +9,14 @@ import { useDateTimeParser } from '../../../../api/commons/dateTimeParse'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
 
-const XRayAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, handleClose: () => void, isNew?: boolean, cv: any }) => {
+export interface XrayRecord {
+    file_url: string,
+    inspected: string,
+    content: null,
+    detail: string
+}
+
+const XRayAddModal = ({show, handleClose, isNew=true, selectedXray=null}: { show: boolean, handleClose: () => void, isNew?: boolean, selectedXray?: XrayRecord & {id: number} | null}) => {
     const cx = classNames.bind(styles);
     const dateParse = useDateTimeParser()
 
@@ -26,24 +33,40 @@ const XRayAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, han
 		}
 	}, [accessToken])
 
-    const [strength, setStrength] = useState("")
-    const [code, setCode] = useState("")
-    const [duration, setDuration] = useState("")
     const [exDate, setExDate] = useState(new Date())
     const [xrayNote, setXrayNote] = useState("")
+    const [file, setFile] = useState<File>()
 
     const renderSelected = () => {
+        if (selectedXray) {
+            console.log(selectedXray)
+            setExDate(new Date(selectedXray.inspected))
+            setXrayNote(`${selectedXray.detail}`)
+        }
     }
 
     const addNewXRay = async () => {
-        const newImooveRecord = {
-            file_url: "",
+        let file_url = ""
+        try {
+            let formData = new FormData()
+            formData.append('file', file ?? "")
+            let response = await axios.post('/api/file', formData, config)
+            file_url = response.data.file_path
+            console.log(`Xray 파일 추가 성공: ${file_url}`);
+        } catch (error) {
+            console.error("Xray 파일 추가 중 오류 발생:", error)
+            return
+        }
+
+        const newXrayRecord: XrayRecord = {
+            file_url: file_url,
             inspected: dateParse(exDate),
             content: null,
             detail: xrayNote
         }
+
         try {
-            await axios.post(url, newImooveRecord, config)
+            isNew ? await axios.post(url, newXrayRecord, config) : await axios.patch(`${url}/${selectedXray?.id}`, newXrayRecord, config)
                 console.log("X-Ray 검사 기록 추가 성공");
         } catch (error) {
                 console.error("X-Ray 검사 기록 추가 중 오류 발생:", error);
@@ -70,7 +93,7 @@ const XRayAddModal = ({show, handleClose, isNew=false, cv}: { show: boolean, han
                                 <div className={`${cx("cell")} ${cx("large")}`}>
                                 <Form.Control
                                     type="file" 
-                                    onChange={(e) => {}}
+                                    onChange={(e: any) => setFile(e.target.files[0])}
                                 />
                                 </div>
                             </div>

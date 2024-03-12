@@ -3,7 +3,6 @@ import styles from './FilterCard.module.css';
 import classNames from 'classnames/bind';
 import { useDispatch } from 'react-redux'
 import { removeFilter } from '../../reducers/filter';
-import { Filter } from 'http-proxy-middleware';
 
 interface valueNumber {
     start: number,
@@ -17,12 +16,12 @@ interface valueDate {
 
 interface FilterCardProps {
     children?: React.ReactNode;
-    category: string, 
+    label: string, 
     value: string | valueNumber | valueDate, 
     keyVal: string | null
 }
 
-const FilterCard = ({category, value, keyVal}: FilterCardProps) => {
+const FilterCard = ({label, value, keyVal}: FilterCardProps) => {
     const cx = classNames.bind(styles);
 
     const dispatch = useDispatch();
@@ -34,7 +33,7 @@ const FilterCard = ({category, value, keyVal}: FilterCardProps) => {
     return (
         <Card className={cx('card-filter')} onClick={remove}>
             <Card.Body className={cx('filter')}>
-            {category}: {
+            {label}: {
                 typeof value === 'string'
                 ? value
                 : typeof value.start === 'number' && typeof value.end === 'number'

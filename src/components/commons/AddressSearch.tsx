@@ -7,10 +7,12 @@ import classNames from 'classnames/bind';
 
 interface AddressSearcherProps{
     setClosed: React.Dispatch<React.SetStateAction<boolean>>
-    setAddress: React.Dispatch<React.SetStateAction<string[]>>
+    setAddress?: React.Dispatch<React.SetStateAction<string[]>>
+    setNokAddress?: (value: string | string[], index: number, field: string | string[]) => void
+    nokIndex?: number
 }
 
-const AddressSearch = ({setClosed, setAddress}: AddressSearcherProps) => {
+const AddressSearch = ({setClosed, setAddress, setNokAddress, nokIndex}: AddressSearcherProps) => {
     const cx = classNames.bind(styles)
 
     const handlePostCode = (data: any) => {
@@ -30,7 +32,11 @@ const AddressSearch = ({setClosed, setAddress}: AddressSearcherProps) => {
         console.log(data)
         console.log(fullAddress)
         console.log(data.zonecode)
-        setAddress([fullAddress, "", data.zonecode])
+        if (setAddress !== undefined) setAddress([fullAddress, "", data.zonecode])
+        console.log(nokIndex)
+        if (setNokAddress !== undefined && nokIndex !== undefined) {
+            setNokAddress([fullAddress, data.zonecode], nokIndex, ["address", "post_number"])
+        }
         setClosed(false)
     }
 

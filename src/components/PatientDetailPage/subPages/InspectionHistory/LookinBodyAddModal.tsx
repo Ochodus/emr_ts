@@ -47,16 +47,14 @@ const LookinBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, ha
     const [date, setDate] = useState<Date>(new Date())
     const [lookinInspections, setLookinInspections] = useState<LookinInspection[]>([])
 
+    const [file, setFile] = useState<File>()
+
     const addNewLookinInspection = () => {
         setLookinInspections([...lookinInspections, {}])
     }
 
     const deleteLookinInspection = (index: number) => {
         setLookinInspections([...lookinInspections.slice(0, index), ...lookinInspections.slice(index + 1)])
-    }
-
-    const lookinBodyResultStates: LookinBodyResultStates = {
-        lookinInspections: [lookinInspections, setLookinInspections]
     }
 
     const updateInspection = (index: number, target: string, value: string) => {
@@ -146,9 +144,10 @@ const LookinBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, ha
                                 <div className={`${cx("cell")} ${cx("text-only")}`}>
                                     <div className={`${cx("cell")} ${cx("smaller")}`}>
                                         <OcrParser 
-                                            type={0} 
+                                            type={3} 
                                             isMask={true} 
-                                            setOcrResult={onChangeOcrResult} 
+                                            setOcrResult={onChangeOcrResult}
+                                            setFile={setFile}
                                             cv={cv} 
                                             smallSize={false}
                                             indicator={1}
@@ -176,8 +175,8 @@ const LookinBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, ha
                                                                 value={inspection.type ?? ""}
                                                                 onChange={(e) => {updateInspection(index, "type", e.target.value)}}
                                                             >
-                                                                {targetAbilities.map((ability: string) => {
-                                                                    return (<option>{ability}</option>)
+                                                                {targetAbilities.map((ability: string, index) => {
+                                                                    return (<option key={index}>{ability}</option>)
                                                                 })}
                                                             </Form.Select>
                                                         </InputGroup>

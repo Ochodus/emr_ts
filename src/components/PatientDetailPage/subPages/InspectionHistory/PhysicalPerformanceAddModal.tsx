@@ -92,6 +92,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
 
     const [selectedInspection, setSelectedInspection] = useState<string | null>("")
 
+    const [file, setFile] = useState<File>()
+
     const inspectionStates: any = {
         fl: [functionalLines, setFunctionalLines],
         yb: [yBalance, setYBalance],
@@ -210,7 +212,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                         <OcrParser 
                                             type={0} 
                                             isMask={true} 
-                                            setOcrResult={onChangeOcrResult} 
+                                            setOcrResult={onChangeOcrResult}
+                                            setFile={setFile}
                                             cv={cv} 
                                             smallSize={false}
                                             indicator={1}

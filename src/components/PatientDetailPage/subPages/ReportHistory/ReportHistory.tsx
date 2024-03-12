@@ -16,7 +16,7 @@ export interface Changes {
 	before_trial: number,
 	after_value: number,
 	after_trial: number,
-	is_improved: true
+	is_improved: boolean
 }
 
 export interface Report {

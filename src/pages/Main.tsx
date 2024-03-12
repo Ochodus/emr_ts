@@ -37,7 +37,7 @@ const Main = ({axiosMode}: {axiosMode: boolean}) => {
                 <div>
                   <p style={{ textAlign: "center", margin: "0" }}>
                     <span style={{ fontSize: "36px", color: "rgb(26, 26, 61)" }}>
-                      <strong>Features</strong>
+                      <strong>메뉴</strong>
                     </span>
                   </p>
                 </div>
@@ -45,7 +45,7 @@ const Main = ({axiosMode}: {axiosMode: boolean}) => {
             </div>
             <div className={`${cx("doz_row")} ${cx("texts")}`}>
               <div className={cx("padding")}>
-                <div style={{ height: "50px" }}>
+                <div style={{ height: "25px" }}>
                 </div>
               </div>
             </div>

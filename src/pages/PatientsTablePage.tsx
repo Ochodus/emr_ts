@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector } from 'react-redux';
 import { RootState } from '../reducers/index'
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { Header, Table } from "../components/commons";
 import { TableHeader } from "../components/commons/Table"
 import { TableFilter, FilterCard, PatientAddModal } from "../components/PatientsTablePage"
@@ -15,7 +15,9 @@ import { ReactComponent as AddIcon } from '../assets/add_icon.svg';
 import { useLocalTokenValidation } from "../api/commons/auth";
 import styles from './PatientsTablePage.module.css';
 import classNames from 'classnames/bind';
-import { Patient } from "../interfaces";
+import { Patient, PhysicalExam } from "../interfaces";
+import { DateFilterBuffer, NumberFilterBuffer, StringFilterBuffer } from "../reducers/filter";
+
 
 const PatientsTablePage = ({axiosMode}: {axiosMode: boolean}) => {
 	const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
@@ -24,7 +26,7 @@ const PatientsTablePage = ({axiosMode}: {axiosMode: boolean}) => {
 
 	const auth = window.localStorage.getItem("persist:auth")
 	const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
-	const url = "/api/patients";
+	const patientUrl = "/api/patients";
 
 	const config = useMemo(() => {
 		return {
@@ -77,7 +79,7 @@ const PatientsTablePage = ({axiosMode}: {axiosMode: boolean}) => {
 		},
 		{
 			Header: "메모",
-			accessor: "note",
+			accessor: "memo",
 			width: 100
 		},
 		{
@@ -129,18 +131,42 @@ const PatientsTablePage = ({axiosMode}: {axiosMode: boolean}) => {
 	} // 상세 필터 보기
 
 	const postPatient = async (newPatientData: Patient, isNewPatient: boolean) => {
+		let response: AxiosResponse<any,any> | undefined
 		try {
-			isNewPatient || !patientData ? await axios.post(url, newPatientData, config) : await axios.patch(`${url}/${patientData[targetPatientIndex].id}`, newPatientData, config)
+			response = isNewPatient || !patientData ? 
+			await axios.post(patientUrl, newPatientData, config) : await axios.patch(`${patientUrl}/${patientData[targetPatientIndex].id}`, newPatientData, config)
 			await getAllPatients()
 		} catch (error) {
+			response = undefined
 			console.error(`환자 ${isNewPatient ? '추가' : '변경'} 중 오류 발생:`, error)
 		}
+		return response
 	} // 환자 추가 및 편집
 
-	const getAllPatients = useCallback(async () => {
+	const postPhysicalExam = async (newPhysicalExam: PhysicalExam, patient_id: number) => {
 		try {
+			await axios.post(`/api/patients/${patient_id}/medical/physical_exam`, newPhysicalExam, config)
+		} catch (error) {
+			console.error(`검사 기록 추가 중 오류 발생:`, error)
+		}
+	} // 기본 검사 결과 추가
+
+	const getAllPatients = useCallback(async (filters: (StringFilterBuffer | NumberFilterBuffer | DateFilterBuffer)[] | null = null) => {
+		let urlQueryPart = ``
+		try {
+			if (filters) {
+				filters.map((filter) => {
+					let query = 
+						filter.category === 'name' ? 'filter_name' : 
+						filter.category === 'patientId' ? 'filter_id' :
+						filter.category === 'phoneNumber' ? 'filter_tel' :
+						filter.category === 'address' ? 'filter_address' :
+						filter.category === 'note' ? 'filter_memo' : ""
+					urlQueryPart = `${query}=${filter.value}&${urlQueryPart}`
+			})}
+			console.log(`api/patients?${urlQueryPart}`.replace(/&$/, ''))
 			const response = await axios.get(
-				`/api/patients`,
+				`/api/patients?${urlQueryPart}`,
 				config
 			)
 			console.log(response.data)
@@ -171,15 +197,15 @@ const PatientsTablePage = ({axiosMode}: {axiosMode: boolean}) => {
 	} // 환자 상세보기
 
 	useEffect(() => {
-		if (axiosMode) getAllPatients()
-	}, [getAllPatients]) // 페이지 첫 렌더링 시 테이블 초기화
+		if (axiosMode) getAllPatients(filters)
+	}, [filters]) // 페이지 첫 렌더링 시 테이블 초기화
 
 	useEffect(() => {
 		let testMode = true
 		if ((process.env.NODE_ENV !== 'development' || testMode) && axiosMode) checkAuth().then((resolvedData) => {
 		  setIsLogin(resolvedData)
 		})
-	  }, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
+	}, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
 
 	return (
 		<div className={cx("structure")}>
@@ -217,11 +243,11 @@ const PatientsTablePage = ({axiosMode}: {axiosMode: boolean}) => {
 										<TableFilter type="date"></TableFilter>
 								</div>
 								<div className={cx("selected-filters")}>
-									{filters.map((filter) => {
+									{filters.map((filter, index) => {
 										return (
 											<FilterCard 
-												key={filter.key}
-												category={filter.category}
+												key={index}
+												label={filter.label}
 												value={filter.value}
 												keyVal={filter.key}
 											/>
@@ -241,7 +267,7 @@ const PatientsTablePage = ({axiosMode}: {axiosMode: boolean}) => {
 									headers={headers} 
 									items={patientData} 
 									useSelector={true}
-									addFunction={postPatient}
+									addPatient={postPatient}
 									table_width="calc(100% - 20px)"
 								/>
 							</div>
@@ -253,7 +279,9 @@ const PatientsTablePage = ({axiosMode}: {axiosMode: boolean}) => {
 					handleClose={handleModalClose} 
 					isNew={isNewPatient} 
 					selectedPatient={patientData ? patientData[targetPatientIndex] : null}
-					addFunction={postPatient}
+					addPatient={postPatient}
+					addPhysicalExam={postPhysicalExam}
+					axiosMode={axiosMode}
 				></PatientAddModal>
 			</div>
 		</div>

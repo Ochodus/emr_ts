@@ -1,92 +1,27 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Table } from "../../../commons/Table";
 import { Card, Button, InputGroup, Form } from "react-bootstrap";
-import { TableHeader } from "../../../commons/Table";
-import { ReactComponent as AddIcon } from '../../../../assets/add_icon.svg';
 import { useParams } from 'react-router-dom';
 import axios from "axios";
 import { useLocalTokenValidation } from "../../../../api/commons/auth";
 import styles from './Enchiridion.module.css';
 import classNames from 'classnames/bind';
 
-export interface Changes {
-	name: string,
-	before_value: number,
-	before_trial: number,
-	after_value: number,
-	after_trial: number,
-	is_improved: true
+interface Enchiridion {
+	id: number,
+	file_url: string,
+    content: object,
+    detail: string,
+    inspected: string
 }
-
-export interface Report {
-	startDate: string,
-	endDate: string,
-	changes: Changes[],
-	changes_detail?: object,
-	memo: string
-} // Report 객체 타입
 
 const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axiosMode: boolean }) => {
 	const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
 	const cx = classNames.bind(styles)
 
-	const headers: TableHeader = [
-		{ 
-			Header: "리포트 기간",
-			accessor: "startDate",
-			Cell: ({ row }) => {
-				return (
-					<div>
-						{`${row.original.startDate} ~ ${row.original.endDate}`}
-					</div>
-				)
-			},
-			width: 40
-		},
-		{ 
-			Header: "변화 항목",
-			accessor: "changes",
-			Cell: ({ row }) => (
-				<div>
-					{row.original.changes.map((change: Changes, index: number) => {
-						return row.original.changes.length - 1 !== index ? `${change.name}, ` : `${change.name}`
-					})}
-				</div>
-			),
-			width: 40
-		},
-		{ 
-			Header: "기타 항목",
-			accessor: "changes_detial",
-			Cell: ({ row }) => (
-				<div>
-					{ JSON.stringify(row.original.changes_detail) }
-				</div>
-			),
-			width: 40
-		},
-		{ 
-			Header: "비고",
-			accessor: "memo",
-			width: 40
-		},
-		{
-			Header: "수정 및 삭제",
-			accessor: "edit",
-			Cell: ({ row }) => (
-				<div className={cx('editing-buttons')}>
-					<Button className={cx('cell-button')} onClick={() => handleModalOpen(false, row.index)}>수정</Button>
-					<Button className={cx('cell-button')} onClick={() => deleteReportHistory(row.index)}>삭제</Button>
-				</div>
-			),
-			width: 100
-		},
-	];
-
 	const { patient_id } = useParams();
 	const auth = window.localStorage.getItem("persist:auth")
 	const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
-	const url = `/api/patients/${patient_id}/medical/reports`
+	const url = `/api/patients/${patient_id}/medical/inspections?inspection_type`
 
 	const config = useMemo(() => {
 		return {
@@ -96,67 +31,89 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 		}
 	}, [accessToken])
 
-	const [reportHistory, setReportHistory] = useState<(Report & {id: number})[]>([])
 	const [enchiridionType, setEnchiridionType] = useState<string | undefined>()
 	const [enchiridionNumber, setEnchiridionNumber] = useState<string | undefined>()
+	const [enchiridionList, setEnchiridionList] = useState<Enchiridion[] | undefined>()
+	const [fileUrl, setFileUrl] = useState("")
+	const [fileUrlAlt, setFileUrlAlt] = useState("")
 
-	const [isModalVisible, setIsModalVisible] = useState(false) // 환자 추가/편집 모달 표시 여부
-	const [isNewReport, setIsNewReport] = useState(false) // 모달의 추가/편집 모드
-	const [targetReportIndex, setTargetReportIndex] = useState<number>(-1) // 수정 및 삭제에 사용되는 타깃 환자 인덱스 (로컬 데이터 기준 인덱스 / 환자 고유 아이디와 다름)
+	const enchiridionTypeList = ["IMOOVE", "X-Ray", "InBody", "Exbody", "Lookin' Body", "혈액 검사 결과", "설문지", "족저경", "운동능력 검사", "정렬 사진", "평지 보행 동영상"]
 
-	const enchiridionTypes = ["Imoove", "X-Ray"]
+	const handleEnchiridionTypeChange = (type: string) => {
+		setEnchiridionType(type)
+		handleEnchiridionNumberChange('-1')
+		if (+type === -1) return
+		getSelectedInspectionList(type)
+	}
 
-	const getReportHistory = useCallback(async () => {
-		try {
-			const response = await axios.get(
-				url,
-				config
-			)
-		
-			console.log(response.data);
-			setReportHistory(response.data);
-		} catch (error) {
-			console.error("진료 조회 중 오류 발생:", error);
+	const handleEnchiridionNumberChange = async (number: string) => {
+		setEnchiridionNumber(number)
+		if (+number === -1) {
+			setFileUrl("") 
+			setFileUrlAlt("")
+			return
 		}
-	}, [config])
-	
-	const postMedicalRecord = async (newReport: Report, isNewReport: boolean) => {
-		try {
-			isNewReport || !reportHistory ? await axios.post(url, newReport, config) : await axios.patch(`${url}/${reportHistory[targetReportIndex].id}`, newReport, config)
-		  	console.log("진료 기록 추가 성공");
-			getReportHistory();
-		} catch (error) {
-		  	console.error("진료 기록 추가 중 오류 발생:", error);
+		if (enchiridionList !== undefined ) {
+			let url = enchiridionList[+number].file_url
+			console.log(url)
+			if (url.includes(' ')) {
+				setFileUrl(url.split(' ')[0])
+				setFileUrlAlt(url.split(' ')[1])
+					// let setImages = [setImage, setImageAlt];
+					// [fileUrl, fileUrlAlt].map(async (furl, index) => {
+					// 	try {
+					// 		const response = await axios.get(
+					// 			`${furl}`,
+					// 			config
+					// 		)
+					// 		setImages[index](response.data)
+					// 	} catch (error) {
+					// 		console.log(index)
+					// 		console.error("기록 조회 중 오류 발생:", error)
+					// 	}
+					// })
+			}
+			else {
+				setFileUrl(enchiridionList[+number].file_url)
+				// try {
+				// 	const response = await axios.get(
+				// 		`${enchiridionList[+number].file_url}`,
+				// 		config
+				// 	)
+				// 	setImage(response.data)
+				// } catch (error) {
+				// 	console.error("기록 조회 중 오류 발생:", error)
+				// }
+			}
 		}
 	}
 
-	const deleteReportHistory = async (targetReportIndex: number) => {
-		if (reportHistory) {
-			let targetId = reportHistory[targetReportIndex].id
-			console.log(`${url}/${targetId}`)
-			try {
-				await axios.delete(
-					`${url}/${targetId}`,
-					config
-				)
-				getReportHistory()
-			} catch (error) {
-				console.error("환자 삭제 중 오류 발생:", error)
-			}
+	const getSelectedInspectionList = useCallback(async (type: string) => {
+		try {
+			const response = await axios.get(
+				`${url}=${
+                    type === "IMOOVE" ? "IMOOVE" :
+                    type === "X-Ray" ? "X-RAY" :
+                    type === "InBody" ? "INBODY" :
+                    type === "Exbody" ? "EXBODY" :
+                    type === "Lookin' Body" ? "LOOKINBODY" :
+                    type === "혈액 검사 결과" ? "BLOOD" :
+                    type === "설문지" ? "SURVEY" :
+                    type === "족저경" ? "PODOSCOPE" :
+                    type === "운동능력 검사" ? "PHYSICAL_PERFORMANCE" :
+                    type === "정렬 사진" ? "" : 
+                    type === "평지 보행 동영상" ? "" :
+                    ""
+                }
+            `,
+				config
+			)
+			console.log(response.data)
+			setEnchiridionList(response.data)
+		} catch (error) {
+			console.error("기록 조회 중 오류 발생:", error)
 		}
-	} // 환자 삭제
-
-	const handleModalOpen = (isNewReport: boolean, targetReportIndex: number) => {
-		setIsNewReport(isNewReport)
-		setTargetReportIndex(targetReportIndex)
-		setIsModalVisible(true)
-	} // 모달 띄우기
-
-	const handleModalClose = () => setIsModalVisible(false) // 모달 닫기
-
-	useEffect(() => {
-		if (axiosMode) getReportHistory();
-	}, [getReportHistory]);
+	}, [config]) // 전체 환자 목록 가져오기
 
 	useEffect(() => {
 		let testMode = true
@@ -174,11 +131,6 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 								<strong>자료 선택</strong>
 							</span>
 						</div>
-						<div className={`${cx("col-inline")} ${cx("col-inline-right")}`}>
-							<div className={cx("button-group")} onClick={() => handleModalOpen(true, -1)}>
-								<AddIcon fill="#454545" className={cx("button-add")}/>
-							</div>
-						</div>
 					</Card.Header>
 					<Card.Body>
 						<div className={cx("section")} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid gray" }}>
@@ -186,10 +138,10 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 								<InputGroup.Text>자료 타입</InputGroup.Text>
 								<Form.Select
 									value={enchiridionType}
-									onChange={(e) => setEnchiridionType(e.target.value)}
+									onChange={(e) => handleEnchiridionTypeChange(e.target.value)}
 								>
 									<option key={-1} value={-1}>미지정</option>
-									{enchiridionTypes.map((enchiridionType, index) => {
+									{enchiridionTypeList.map((enchiridionType, index) => {
 										return (
 											<option key={index} value={enchiridionType}>{`${enchiridionType}`}</option>
 										)
@@ -199,20 +151,21 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 							<InputGroup style={{ width: "45%" }}>
 								<InputGroup.Text>회차</InputGroup.Text>
 								<Form.Select
-									value={enchiridionType}
-									onChange={(e) => setEnchiridionType(e.target.value)}
+									value={enchiridionNumber}
+									onChange={(e) => handleEnchiridionNumberChange(e.target.value)}
 								>
 									<option key={-1} value={-1}>미지정</option>
-									{enchiridionTypes.map((enchiridionType, index) => {
+									{enchiridionList?.map((enchiridion, index) => {
 										return (
-											<option key={index} value={enchiridionType}>{`${enchiridionType}`}</option>
+											<option key={index} value={index}>{`${index} / ${enchiridion.inspected}`}</option>
 										)
 									})}
 								</Form.Select>
 							</InputGroup>
 						</div>
 						<div className={cx("section-body")}>
-							<img style={{ width: '100%', height: '500px' }}></img>
+							<img style={{ width: '100%'}} src={fileUrl}></img>
+							{enchiridionType === 'InBody' ? <img style={{ width: '100%'}} src={fileUrlAlt}></img> : null}
 						</div>
 					</Card.Body>
 					<Card.Footer>

@@ -50,6 +50,13 @@ const Login = ({axiosMode}: {axiosMode: boolean}) => {
 		post_api_login();
 	} // 로그인 버튼 클릭 시 로그인 시도
 
+	const handleKeyPress = (e: any) => {
+		if (e.key === "Enter") {
+			console.log(document.getElementById("btn-login"))
+			document.getElementById(cx('btn-login'))?.click()
+		}
+	}
+
 	const post_api_login = async () => {
 		try {
 			const response = await axios.post(
@@ -88,6 +95,7 @@ const Login = ({axiosMode}: {axiosMode: boolean}) => {
 						aria-label="id"
 						value={email}
 						onChange={(event: ChangeEvent<HTMLInputElement>) => handleInputChange(event, setEmail)}
+						onKeyDown={(e) => handleKeyPress(e)}
 						size="lg"
 					/>
 					{isFormValid.email || !isTriedToLogin ? null : <div className={cx("form-unvalid-msg")}>* 필수 입력란입니다.</div>}
@@ -97,6 +105,7 @@ const Login = ({axiosMode}: {axiosMode: boolean}) => {
 						aria-label="password"
 						value={passw}
 						onChange={(event: ChangeEvent<HTMLInputElement>) => handleInputChange(event, setPassw)}
+						onKeyDown={(e) => handleKeyPress(e)}
 						size="lg"
 					/>
 					{isFormValid.passw || !isTriedToLogin ? null : <div className={cx("form-unvalid-msg")}>* 필수 입력란입니다.</div>}

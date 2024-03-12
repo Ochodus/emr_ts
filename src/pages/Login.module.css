@@ -33,6 +33,10 @@
     justify-content: space-evenly;
 }
 
+#input-email {
+    margin-bottom: 5px;
+}
+
 #btn-login {
     display: flex;
     margin-top: 15px;

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 const { Sidebar, Menu, SubMenu, MenuItem, menuClasses } = require('react-pro-sidebar');
 
-const SideBar = ({ func }: { func: (s: string) => any}) => {
+const SideBar = ({ setSubPage }: { setSubPage: (s: string) => any}) => {
     const [collapsed, setCollapsed] = useState(false);
 
     return (
@@ -57,18 +57,19 @@ const SideBar = ({ func }: { func: (s: string) => any}) => {
             >
                 <SubMenu label="환자 정보" defaultOpen={true}>
                     <MenuItem 
-                     onClick={() => func("summary")}> 환자 요약 및 통계 </MenuItem>
-                    <MenuItem onClick={() => func("readingData")}> 자료 열람 </MenuItem>
+                     onClick={() => setSubPage("summary")}> 환자 요약 및 통계 </MenuItem>
+                    <MenuItem onClick={() => setSubPage("readingData")}> 자료 열람 </MenuItem>
                 </SubMenu>
                 <SubMenu label="진료 및 검사내역 편집" defaultOpen={true}>
-                    <MenuItem onClick={() => func("medicalRecord")}> 진료 내역 </MenuItem>
-                    <MenuItem onClick={() => func("testSelect")}> 검사 내역 </MenuItem>
-                    <MenuItem onClick={() => func("reportHistory")}> 레포트 내역 </MenuItem>
-                    <MenuItem onClick={() => func("exerciseDetail")}> 운동치료 내역 </MenuItem>
+                    <MenuItem onClick={() => setSubPage("medicalRecord")}> 진료 내역 </MenuItem>
+                    <MenuItem onClick={() => setSubPage("testSelect")}> 검사 내역 </MenuItem>
+                    <MenuItem onClick={() => setSubPage("reportHistory")}> 레포트 내역 </MenuItem>
+                    <MenuItem onClick={() => setSubPage("exerciseDetail")}> 운동치료 내역 </MenuItem>
+                    <MenuItem onClick={() => setSubPage("physicalExam")}>  신체 검사 내역 </MenuItem>
                 </SubMenu>
                 <SubMenu label="기타자료" defaultOpen={true}>
-                    <MenuItem onClick={() => func("personalInformation")}> 개인정보 제공 및 활용 동의서 </MenuItem>
-                    <MenuItem onClick={() => func("exerciseGuide")}> 운동치료 안내서 </MenuItem>
+                    <MenuItem onClick={() => setSubPage("personalInformation")}> 개인정보 제공 및 활용 동의서 </MenuItem>
+                    <MenuItem onClick={() => setSubPage("exerciseGuide")}> 운동치료 안내서 </MenuItem>
                 </SubMenu>
             </Menu>
         </Sidebar>

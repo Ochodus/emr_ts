@@ -1,16 +1,17 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Patient } from '../../interfaces';
-import styles from './PatientDetailHeader.module.css'
+import { Patient, PhysicalExam } from '../../interfaces';
+import styles from './PatientDetailHeader.module.css';
 import classNames from 'classnames/bind';
 
-const HeaderMain = ({ curPatient }: { curPatient: Patient & {id: number} | undefined }) => {
-    const cx = classNames.bind(styles);
+const HeaderMain = ({ curPatient, lastPhysicalExam, setSubPage }: { curPatient: Patient & {id: number} | undefined, lastPhysicalExam: PhysicalExam | undefined, setSubPage: (page: string) => void}) => {
+    const cx = classNames.bind(styles)
+    const maxHeaderHeight = 80
 
     return (
         <div className={cx("header-main")}>
             <div className={cx("inline-section")}>
                 {curPatient ? 
-                <div className={`${cx("col-group")}`}>
+                <div className={`${cx("col-group")}`} style={{ minWidth: '250px' }}>
                     <div className={cx("text-wrapper")}>
                         <span className={cx("patient-id")}>
                             {curPatient?.id}
@@ -30,13 +31,13 @@ const HeaderMain = ({ curPatient }: { curPatient: Patient & {id: number} | undef
                 : null}
                 <div className={`${cx("col-group")} ${cx("border")}`}></div>
                 {curPatient ? 
-                    <div className={`${cx("col-group")}`}>
+                    <div className={`${cx("col-group")} ${cx("physical-exam")}`} style={{ minWidth: '410px' }} onClick={() => {setSubPage("physicalExam")}}>
                         <div className={cx("text-wrapper")}>
                             <span className={cx("patient-state")}>
                                 체온
                             </span>
                             <span className={cx("value")}>
-                                {"37.5"}
+                                {lastPhysicalExam?.body_temperature} ℃
                             </span>
                         </div>
                         <div className={cx("text-wrapper")}>
@@ -44,7 +45,7 @@ const HeaderMain = ({ curPatient }: { curPatient: Patient & {id: number} | undef
                                 체중
                             </span>
                             <span className={cx("value")}>
-                                {curPatient.weight}
+                                {lastPhysicalExam?.weight} kg
                             </span>
                         </div>
                         <div className={cx("text-wrapper")}>
@@ -52,35 +53,41 @@ const HeaderMain = ({ curPatient }: { curPatient: Patient & {id: number} | undef
                                 신장
                             </span>
                             <span className={cx("value")}>
-                                {curPatient.height}
+                                {lastPhysicalExam?.height} cm
                             </span>
                         </div>
                         <div className={cx("text-wrapper")}>
                             <span className={cx("patient-state")}>
-                                {"(2020-03-01)"}
+                                ({lastPhysicalExam?.recorded.replaceAll('"', '').split('T')[0]})
                             </span>
                         </div>
                     </div>
                 : null}
-                {curPatient ? 
-                curPatient.noks?.map((nok) => { 
-                    return (<div className={`${cx("col-group")}`}>
-                                <div className={cx("text-wrapper")}>
-                                    <span className={cx("patient-state")}>
-                                        보호자
-                                    </span>
-                                </div>
-                                <div className={cx("text-wrapper")}>
+                <div className={`${cx("col-group")} ${cx("border")}`}></div>
+                <div className={`${cx("col-group")}`} style={{ minWidth: '200px' }}>
+                    {curPatient ? 
+                        <div className={cx("text-wrapper")}>
+                            <span className={cx("patient-state")}>
+                                보호자
+                            </span>
+                        </div> : null
+                    }
+                    {curPatient ? 
+                        curPatient.noks?.map((nok, index) => { 
+                            return (
+                                index < 2 ?
+                                <div className={cx("text-wrapper")} key={index}>
                                     <span className={cx("patient-state")}>
                                         {nok.type}
                                     </span>
                                     <span className={cx("value")}>
-                                        {`${nok.last_name}${nok.first_name}, ${nok.sex} ${nok.birthday}세`}
+                                        {`${nok.last_name}${nok.first_name}, ${nok.relationship} ${new Date().getFullYear() - new Date(nok.birthday ?? "").getFullYear()}세`}
                                     </span>
-                                </div>
-                            </div>)
-                })
-                : null}
+                                </div> : null
+                            )
+                        }) : null
+                    }
+                </div>
             </div>
         </div>
     )

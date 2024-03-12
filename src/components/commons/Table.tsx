@@ -23,7 +23,7 @@ interface TableProps {
 	items: any,
 	table_width: string,
 	useSelector?: boolean,
-	addFunction?: (newPatient: any, isNew: boolean, id: number) => Promise<void>
+	addPatient?: (newPatient: any, isNew: boolean, id: number) => Promise<any>
 }
 
 interface IndeterminateCheckboxProps {

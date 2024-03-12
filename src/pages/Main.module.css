@@ -1,13 +1,10 @@
 .section_wrap {
-    padding-top: 50px;
+    padding-top: 25px;
     padding-bottom: 100px;
     background-color: #f9fafd;
 }
 
 .inside {
-    max-width: 1120px;
-    padding-left: 20px;
-    padding-right: 20px;
     margin: 0 auto;
     position: relative;
 }

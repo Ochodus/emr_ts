@@ -4,87 +4,90 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup'
 import { useNavigate } from "react-router-dom";
+import { useRequestAPI } from "../api/commons/request";
+import { InputLine } from "../components/commons/InputLine";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import styles from './SignUp.module.css'
 import classNames from 'classnames/bind';
 
 const SignUp = ({axiosMode}: {axiosMode: boolean}) => {
-  const cx = classNames.bind(styles)
-  const navigate = useNavigate()
+	const cx = classNames.bind(styles)
+	const navigate = useNavigate()
+	const request = useRequestAPI()
 
-  const [FirstName, setFirstName] = useState("")
-  const [SecondName, setSecondName] = useState("")
-  const [email, setEmail] = useState("")
-  const [phoneN, setPhoneN] = useState(["", "", ""])
-  const [passw, setPassw] = useState("")
-  const [passwC, setPasswC] = useState("")
-  const [showPswd, setShowPswd] = useState("")
-  const [selectedPosition, setSelectedPosition] = useState("")
-  const [selectedDepartment, setSelectedDepartment] = useState("")
+	const [FirstName, setFirstName] = useState("")
+	const [SecondName, setSecondName] = useState("")
+	const [email, setEmail] = useState("")
+	const [phoneN, setPhoneN] = useState(["", "", ""])
+	const [passw, setPassw] = useState("")
+	const [passwC, setPasswC] = useState("")
+	const [showPswd, setShowPswd] = useState("")
+	const [selectedPosition, setSelectedPosition] = useState("원장")
+	const [selectedDepartment, setSelectedDepartment] = useState("통증")
 
-  const [accessToken, setAccessToken] = useState("") // 액세스 토큰 상태 추가
+	const [accessToken, setAccessToken] = useState("") // 액세스 토큰 상태 추가
 
-  const [isTriedToSignUp, setIsTriedToSignUp] = useState(false) // 회원 가입 시도 여부
-  const [isFormValid, setIsFormValid] = useState({name: false, phoneN: false, email: false, passw: false, passwC: false})
+	const [isTriedToSignUp, setIsTriedToSignUp] = useState(false) // 회원 가입 시도 여부
+	const [isFormValid, setIsFormValid] = useState({name: false, phoneN: false, email: false, passw: false, passwC: false})
 
-  const handleRegistrationClick = () => {
-    setIsTriedToSignUp(true)
-    if (!formValidationCheck()) {
-      alert("유효하지 않은 입력 필드가 있습니다.")
-      return
-    }
-    post_signup()
-  } // 회원 가입 버튼 클릭 시 이벤트
+  	const handleRegistrationClick = () => {
+		setIsTriedToSignUp(true)
+		if (!formValidationCheck()) {
+			alert("유효하지 않은 입력 필드가 있습니다.")
+			return
+		}
+		post_signup()
+  	} // 회원 가입 버튼 클릭 시 이벤트
 
-  const setPositionChange = (e: string) => {
-    setSelectedPosition(e)
-  } 
+	const setPositionChange = (e: string) => {
+		setSelectedPosition(e)
+	} 
 
-  const formValidationCheck = () => {
-    let nameCheck = FirstName !== "" && SecondName !== ""
-    let phoneNCheck = phoneN[1] !== "" && phoneN[2] !== ""
-    let emailCheck = email !== ""
-    let passwCheck = passw !== ""
-    let passwCCheck = passw === passwC
+	const formValidationCheck = () => {
+		let nameCheck = FirstName !== "" && SecondName !== ""
+		let phoneNCheck = phoneN[1] !== "" && phoneN[2] !== ""
+		let emailCheck = email !== ""
+		let passwCheck = passw !== ""
+		let passwCCheck = passw === passwC
 
-    setIsFormValid({
-      ...isFormValid, 
-      name: nameCheck,
-      phoneN: phoneNCheck,
-      email: emailCheck,
-      passw: passwCheck,
-      passwC: passwCCheck
-    })
+		setIsFormValid({
+			...isFormValid, 
+			name: nameCheck,
+			phoneN: phoneNCheck,
+			email: emailCheck,
+			passw: passwCheck,
+			passwC: passwCCheck
+		})
 
-    return nameCheck && phoneNCheck && emailCheck && passwCheck && passwCCheck
-  } // 회원 가입 폼 유효성 검사
+		return nameCheck && phoneNCheck && emailCheck && passwCheck && passwCCheck
+	} // 회원 가입 폼 유효성 검사
 
-  const post_signup = async () => {
-    try {
-      const response = await axios.post(
-        "/api/auth/signup",
-        {
-          email: email,
-          password: passw,
-          first_name: FirstName,
-          last_name: SecondName,
-          position: selectedPosition,
-          sex: 0,
-          phone_number: `${phoneN[0]}-${phoneN[1]}-${phoneN[2]}`,
-          department: selectedDepartment,
-        }
-      )
+  	const post_signup = async () => {
+		try {
+		const response = await axios.post(
+			"/api/auth/signup",
+			{
+			email: email,
+			password: passw,
+			first_name: FirstName,
+			last_name: SecondName,
+			position: selectedPosition,
+			sex: 0,
+			phone_number: `${phoneN[0]}-${phoneN[1]}-${phoneN[2]}`,
+			department: selectedDepartment,
+			}
+		)
 
-      const token = response.data
-      setAccessToken(token) // 액세스 토큰을 상태로 저장
+		const token = response.data
+		setAccessToken(token) // 액세스 토큰을 상태로 저장
 
-      console.log("성공 - 액세스 토큰:", token)
-      alert("회원가입 성공!");
-      navigate('/login');
-    } catch (error) {
-      console.error("회원 가입 중 오류 발생:", error)
-    }
-  } // 회원 가입 벡앤드 요청
+		console.log("성공 - 액세스 토큰:", token)
+		alert("회원가입 성공!");
+		navigate('/login');
+		} catch (error) {
+			console.error("회원 가입 중 오류 발생:", error)
+		}
+	} // 회원 가입 벡앤드 요청
 
   return (
     <div className={cx('structure-signup')}>

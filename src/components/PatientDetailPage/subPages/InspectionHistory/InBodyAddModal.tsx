@@ -10,9 +10,7 @@ import Form from 'react-bootstrap/Form'
 import Button from 'react-bootstrap/Button'
 import styles from './InBodyAddModal.module.css'
 import classNames from 'classnames/bind';
-import Input from 'react-select/dist/declarations/src/components/Input'
 import { useParams } from 'react-router-dom'
-import { factory } from 'typescript'
 import { useDateTimeParser } from '../../../../api/commons/dateTimeParse'
 
 interface Inspection {
@@ -36,15 +34,6 @@ interface InbodyResultStates {
 const getPercentageFromValue = (minValue: number, minRatio: number, value: number, valuePercentage?: number) => {
     if (valuePercentage) return 0
     else return Math.round(+value/(+minValue/(minRatio/100)) * 100000)/1000
-}
-const getValueFromPercentage = (minValue: number, minPercentage: number, value: number, ) => {
-    return Math.round(((minValue/minPercentage)) * value)/100
-}
-
-const getWeightNormalRange = (height: number) => {
-    let min = Math.pow(height/100, 2) * 22 * 0.85
-    let max = Math.pow(height/100, 2) * 22 * 1.15
-    return {min: min, max: max}
 }
 
 const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handleClose: ()=> void, isNew?: boolean, cv: any}) => {
@@ -106,7 +95,10 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
     const [bodyWaterComposition, setBodyWaterComposition] = useState<(Datum)[]>([])
     const [segmentalBodyWaterAnalysis, setSegmentalBodyWaterAnalysis] = useState<(Datum)[]>([])
 
-    const [showPercentage, setShowPercentage] = useState(true)
+    const [file, setFile] = useState<File>()
+    const [fileWater, setFileWater] = useState<File>()
+
+    const [memo, setMemo] = useState("")
 
     const inbodyResultStates: InbodyResultStates = {
         bodyWater: [bodyWater, setBodyWater],
@@ -448,8 +440,32 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
     ]
 
     const addInBodyRecord = async () => {
+        let file_url = ""
+        try {
+            let formData = new FormData()
+            formData.append('file', file ?? "")
+            let response = await axios.post('/api/file', formData, config)
+            file_url = response.data.file_path
+            console.log(`InBody 파일 추가 성공: ${file_url}`);
+        } catch (error) {
+            console.error("InBody 파일 추가 중 오류 발생:", error)
+            return
+        }
+
+        let file_water_url = ""
+        try {
+            let formData = new FormData()
+            formData.append('file', fileWater ?? "")
+            let response = await axios.post('/api/file', formData, config)
+            file_water_url = response.data.file_path
+            console.log(`InBodyWater 파일 추가 성공: ${file_water_url}`);
+        } catch (error) {
+            console.error("InBodyWater 파일 추가 중 오류 발생:", error)
+            return
+        }
+
         const newInBodyRecord = {
-            file_url: "",
+            file_url: `${file_url} ${file_water_url}`,
             inspected: dateParser(date ?? new Date()),
             content: {
                 user_id: patient_id,
@@ -496,7 +512,7 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                 extracellular_hydration_percentage: ecwRatio.value,
                 body_changes: []
             },
-            detail: ""
+            detail: memo
         }
         try {
             await axios.post(url, newInBodyRecord, config)
@@ -603,6 +619,7 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                                             type={0} 
                                             isMask={true} 
                                             setOcrResult={onChangeOcrResult} 
+                                            setFile={setFile}
                                             cv={cv} 
                                             smallSize={true}
                                             indicator={1}
@@ -617,6 +634,7 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                                             type={1} 
                                             isMask={true} 
                                             setOcrResult={onChangeOcrResult} 
+                                            setFile={setFileWater}
                                             cv={cv} 
                                             smallSize={true}
                                             indicator={2}
@@ -783,7 +801,7 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                                     }
                                 })}
                             </div>
-                            <div className={cx("inline")}>
+                            <div className={cx("inline")} style={{ marginTop: '15px' }}>
                                 <div className={cx("cell")}>
                                     <InputGroup>
                                         <InputGroup.Text>검사일자</InputGroup.Text>
@@ -796,6 +814,26 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                                     </InputGroup>
                                 </div>
                             </div>
+                            <div className={cx("group-field")}> 
+                                <div className={cx("group-title")}>
+                                    <span>비고</span>
+                                </div>
+                                <div className={cx("group-content")}>
+                                    <div className={cx("inline")}>
+                                        <div className={`${cx("cell")}`}>
+                                            <InputGroup>
+                                                <InputGroup.Text>메모</InputGroup.Text>
+                                                <Form.Control
+                                                    as="textarea"
+                                                    rows={3}
+                                                    value={memo}
+                                                    onChange={(e) => setMemo(e.target.value)}
+                                                />
+                                            </InputGroup>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>    
                         </div>
                     </div>
                 </div>

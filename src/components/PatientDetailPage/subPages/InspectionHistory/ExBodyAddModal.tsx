@@ -86,6 +86,9 @@ const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
     const [stepWidth, setStepWidth] = useState<number>()
     const [stride, setStride] = useState<number>()
 
+    const [file, setFile] = useState<File>()
+    const [memo, setMemo] = useState("")
+
     const exbodyResultStates: ExbodyResultStates = {
         fhp: [fhp, setFhp],
         trunkLean: [trunkLean, setTrunkLean],
@@ -278,8 +281,20 @@ const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
     ]
 
     const addExBodyRecord = async () => {
+        let file_url = ""
+        try {
+            let formData = new FormData()
+            formData.append('file', file ?? "")
+            let response = await axios.post('/api/file', formData, config)
+            file_url = response.data.file_path
+            console.log(`InBody 파일 추가 성공: ${file_url}`);
+        } catch (error) {
+            console.error("InBody 파일 추가 중 오류 발생:", error)
+            return
+        }
+
         const newInBodyRecord = {
-            file_url: "",
+            file_url: file_url,
             inspected: dateParser(date ?? new Date()),
             content: {
                 name: "",
@@ -295,27 +310,27 @@ const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                 bed_no: 0,
                 fhp: {
                     image: "",
-                    rear: fhp?.rear,
-                    front: fhp?.front
+                    rear: fhp?.rear ?? 0,
+                    front: fhp?.front ?? 0
                 },
                 trunk_lean: {
                     image: "",
-                    rear: trunkLean?.rear,
-                    front: trunkLean?.front
+                    rear: trunkLean?.rear ?? 0,
+                    front: trunkLean?.front ?? 0
                 },
                 hip_extension_and_flexion: {
                     image: "",
-                    left_front: hipExtensionFlexion?.leftGait.front,
-                    left_rear: hipExtensionFlexion?.leftGait.rear,
-                    right_front: hipExtensionFlexion?.rightGait.front,
-                    right_rear: hipExtensionFlexion?.rightGait.rear,
+                    left_front: hipExtensionFlexion?.leftGait.front ?? 0,
+                    left_rear: hipExtensionFlexion?.leftGait.rear ?? 0,
+                    right_front: hipExtensionFlexion?.rightGait.front ?? 0,
+                    right_rear: hipExtensionFlexion?.rightGait.rear ?? 0,
                 },
                 hip_rotation: {
                     image: "",
-                    right_inside: hipRotation?.leftGait.front,
-                    right_outside: hipRotation?.leftGait.rear,
-                    left_inside: hipRotation?.rightGait.front,
-                    left_outside: hipRotation?.rightGait.rear,
+                    right_inside: hipRotation?.leftGait.front ?? 0,
+                    right_outside: hipRotation?.leftGait.rear ?? 0,
+                    left_inside: hipRotation?.rightGait.front ?? 0,
+                    left_outside: hipRotation?.rightGait.rear ?? 0,
                 },
                 knee_extension_and_flexion: {
                     image: "",
@@ -324,23 +339,22 @@ const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                 },
                 trunk_side_lean: {
                     image: "",
-                    left: trunkSideLean?.left,
-                    right: trunkSideLean?.right
+                    left: trunkSideLean?.left ?? 0,
+                    right: trunkSideLean?.right ?? 0
                 },
                 horizontal_movement_of_cog: {
                     image: "",
-                    left: horizontalMovementOfCOG?.left,
-                    right: horizontalMovementOfCOG?.right
+                    left: horizontalMovementOfCOG?.left ?? 0,
+                    right: horizontalMovementOfCOG?.right ?? 0
                 },
                 vertical_movement_of_cog: {
                     image: "",
-                    left: verticalMovementOfCOG ?? 0,
-                    right: verticalMovementOfCOG ?? 0,
+                    up: verticalMovementOfCOG ?? 0
                 },
                 pelvic_rotation: {
                     image: "",
-                    left: pelvicRotation?.left,
-                    right: pelvicRotation?.right
+                    left: pelvicRotation?.left ?? 0,
+                    right: pelvicRotation?.right ?? 0
                 },
                 step_width: {
                     image: "",
@@ -351,7 +365,7 @@ const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                     value: stride
                 }
             },
-            detail: ""
+            detail: memo
         }
         try {
             await axios.post(url, newInBodyRecord, config)
@@ -384,9 +398,10 @@ const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                                 <div className={`${cx("cell")} ${cx("text-only")}`}>
                                     <div className={`${cx("cell")} ${cx("smaller")}`}>
                                         <OcrParser 
-                                            type={0} 
+                                            type={2} 
                                             isMask={true} 
                                             setOcrResult={onChangeOcrResult} 
+                                            setFile={setFile}
                                             cv={cv} 
                                             smallSize={false}
                                             indicator={1}
@@ -422,6 +437,26 @@ const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                                 </div>
                             </div>
                         </div>
+                        <div className={cx("group-field")}> 
+                            <div className={cx("group-title")}>
+                                <span>비고</span>
+                            </div>
+                            <div className={cx("group-content")}>
+                                <div className={cx("inline")}>
+                                    <div className={`${cx("cell")}`}>
+                                        <InputGroup>
+                                            <InputGroup.Text>메모</InputGroup.Text>
+                                            <Form.Control
+                                                as="textarea"
+                                                rows={3}
+                                                value={memo}
+                                                onChange={(e) => setMemo(e.target.value)}
+                                            />
+                                        </InputGroup>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>  
                     </div>
                 </div>
             </Modal.Body>
