@@ -1,4 +1,3 @@
-import ReactDom from 'react-dom'
 import React from 'react'
 import DaumPostcodeEmbed from 'react-daum-postcode'
 import Button from 'react-bootstrap/Button'
@@ -7,7 +6,11 @@ import classNames from 'classnames/bind';
 
 interface AddressSearcherProps{
     setClosed: React.Dispatch<React.SetStateAction<boolean>>
-    setAddress?: React.Dispatch<React.SetStateAction<string[]>>
+    setAddress?: {
+        setMainAddress: React.Dispatch<React.SetStateAction<string>>,
+        setSubAddress: React.Dispatch<React.SetStateAction<string>>,
+        setPostalCode: React.Dispatch<React.SetStateAction<string>>
+    }
     setNokAddress?: (value: string | string[], index: number, field: string | string[]) => void
     nokIndex?: number
 }
@@ -32,7 +35,11 @@ const AddressSearch = ({setClosed, setAddress, setNokAddress, nokIndex}: Address
         console.log(data)
         console.log(fullAddress)
         console.log(data.zonecode)
-        if (setAddress !== undefined) setAddress([fullAddress, "", data.zonecode])
+        if (setAddress !== undefined) {
+            setAddress.setMainAddress(fullAddress)
+            setAddress.setSubAddress("")
+            setAddress.setPostalCode(data.zonecode)
+        }
         console.log(nokIndex)
         if (setNokAddress !== undefined && nokIndex !== undefined) {
             setNokAddress([fullAddress, data.zonecode], nokIndex, ["address", "post_number"])

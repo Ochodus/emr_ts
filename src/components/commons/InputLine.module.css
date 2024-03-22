@@ -14,3 +14,8 @@
     color: rgb(170, 0, 0);
     padding: 10px 5px 10px 10px;
 }
+
+.radio-cell {
+    margin-left: 10% !important;
+    margin: auto;
+}

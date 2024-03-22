@@ -25,6 +25,7 @@
     "d3-interpolate": "^3.0.1",
     "follow-redirects": "^1.15.4",
     "http-proxy-middleware": "^2.0.6",
+    "immer": "^10.0.4",
     "multiselect-react-dropdown": "^2.0.25",
     "opencv-react": "^0.0.6",
     "opencv-ts": "^1.3.6",

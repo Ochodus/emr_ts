@@ -7,13 +7,13 @@ import classNames from 'classnames/bind';
 import { useRequestAPI } from "../api/commons/request";
 import { InputLine } from "../components/commons/InputLine";
 import { User } from "../interfaces";
-import { createCustomSelector, createEmailInput, createNameInput, createPhoneNumberInput } from "../assets/data/inputFromData";
+import { createCustomSelector, createEmailInput, createUserNameInput, createPhoneNumberInput } from "../api/forms/userInputFormData";
 import { useNavigate } from "react-router-dom";
+import { findElement } from "../api/commons/utils";
 
 export interface CurrentUser {
 	[index: string]: string | string[] | undefined
-	firstName?: string,
-	lastName?: string,
+	name?: string[],
 	gender?: string,
 	phoneNumber?: string[],
 	email?: string[],
@@ -41,8 +41,7 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 	const handleResponsedUserData = (data: any) => {
 		console.log(data)
 		setCurrentUser({
-			firstName: data.first_name,
-			lastName: data.last_name,
+			name: [data.last_name, data.first_name],
 			phoneNumber: ['010', data.phone_number.split('-')[1], data.phone_number.split('-')[2]],
 			email: [...data.email.split('@'), "직접 입력"],
 			gender: `${data.sex}`,
@@ -92,10 +91,10 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 
 	const updateUserInformation = (data?: any) => {
 		const userInformation: User = {
-			first_name: currentUser?.firstName ?? "",
-			last_name: currentUser?.lastName ?? "",
-			phone_number: `-${currentUser?.phoneNumber?.find((_, index) => index === 1)}-${currentUser?.phoneNumber?.find((_, index) => index === 2)}`,
-			email: `${currentUser?.email?.find((_, index) => index === 0)}@${currentUser?.email?.find((_, index) => index === 1)}`,
+			first_name: `${findElement(currentUser?.name, 0) ?? ""}`,
+			last_name: `${findElement(currentUser?.name, 1) ?? ""}`,
+			phone_number: `-${findElement(currentUser?.phoneNumber, 1)}-${findElement(currentUser?.phoneNumber, 2)}`,
+			email: `${findElement(currentUser?.email, 0)}@${findElement(currentUser?.email, 1)}`,
 			sex: +(currentUser?.gender ?? ""),
 			position: currentUser?.selectedPosition ?? "",
 			department: currentUser?.selectedDepartment ?? "",
@@ -136,7 +135,7 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 			<img id={cx('logo-mypage')} src={`${process.env.PUBLIC_URL}/images/logo.png`} alt="doctor" />
 			<div id={cx('field-mypage')}>
 				<h1 id={cx('title-mypage')} style={{ textAlign: 'center' }}>마이페이지</h1>
-				<div id={cx('doctor-name')}><h2>{`${currentUser?.selectedPosition ?? ""} ${currentUser?.lastName ?? ""}${currentUser?.firstName ?? ""}`}</h2></div>
+				<div id={cx('doctor-name')}><h2>{`${currentUser?.selectedPosition ?? ""} ${findElement(currentUser?.name, 0) ?? ""}${findElement(currentUser?.name, 1) ?? ""}`}</h2></div>
 				<div className={cx('img-section')}>
 					<div className={cx('doctor-img')} onClick={() => {triggerFileInput()}}>
 						<img
@@ -156,7 +155,7 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 				<Form id={cx('input-group-mypage')}>
 					<div className={cx("row-group")}>
 						<InputLine
-							inputCells={[createNameInput(currentUser, updateCurrentUser, isFormValid.name || !isTriedToEdit)]}
+							inputCells={[createUserNameInput(currentUser, updateCurrentUser, isFormValid.name || !isTriedToEdit)]}
 						/>
 						<InputLine
 							inputCells={[createPhoneNumberInput(currentUser, updateCurrentUser, isFormValid.phoneNumber || !isTriedToEdit)]}
@@ -170,13 +169,13 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 					<div className={cx("row-group")}>
 						<InputLine
 							inputCells={[
-								createCustomSelector('직위', currentUser, updateCurrentUser, [
+								createCustomSelector('직위', 'selectedDepartment', currentUser, updateCurrentUser, [
 									{ text: '원장' },
 									{ text: '국장' },
 									{ text: '간호조무사' },
 									{ text: '물리치료사' }
 								]),
-								createCustomSelector('부서', currentUser, updateCurrentUser, [
+								createCustomSelector('부서', 'selectedDepartment', currentUser, updateCurrentUser, [
 									{ text: '통증' },
 									{ text: '센터' }
 								])

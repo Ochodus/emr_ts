@@ -1,9 +1,9 @@
-import { PatientForm } from "../../components/PatientsTablePage/PatientAddModal"
+import { findElement } from "../commons/utils"
 import { InputCellProps } from "../../components/commons/InputLine"
 import { CurrentUser } from "../../pages/UserInformation"
 
-export const createNameInput = (
-    values: CurrentUser | PatientForm | undefined, 
+export const createUserNameInput = (
+    values: CurrentUser | undefined,
     onChanges: (key: string, index?: number) => (value: string) => void,
     validation: boolean
 ) => {
@@ -13,14 +13,14 @@ export const createNameInput = (
             {
                 type: 'text',
                 placeholder: "성",
-                value: values?.patientName ?? "",
-                onChange: onChanges('lastName')
+                value: findElement(values?.name, 0) ?? "",
+                onChange: onChanges('name', 0)
             },
             {
                 type: 'text',
                 placeholder: "이름",
-                value: values?.firstName ?? "",
-                onChange: onChanges('firstName')
+                value: findElement(values?.name, 1) ?? "",
+                onChange: onChanges('name', 0)
             }
         ],
         invalidMsg: {
@@ -40,7 +40,7 @@ export const createPhoneNumberInput = (
         fieldProps: [
             {
                 type: 'select',
-                value: values?.phoneNumber?.find((_, index) => index === 0) ?? "",
+                value: findElement(values?.phoneNumber, 0) ?? "",
                 onChange: onChanges('phoneNumber', 0),
                 tail: {
                     text: '-',
@@ -52,7 +52,7 @@ export const createPhoneNumberInput = (
             },
             {
                 type: 'text',
-                value: values?.phoneNumber?.find((_, index) => index === 1) ?? "",
+                value: findElement(values?.phoneNumber, 1) ?? "",
                 onChange: onChanges('phoneNumber', 1),
                 tail: {
                     text: '-',
@@ -61,7 +61,7 @@ export const createPhoneNumberInput = (
             },
             {
                 type: 'text',
-                value: values?.phoneNumber?.find((_, index) => index === 2) ?? "",
+                value: findElement(values?.phoneNumber, 2) ?? "",
                 onChange: onChanges('phoneNumber', 2)
             }
         ],
@@ -83,7 +83,7 @@ export const createEmailInput = (
             {
                 type: 'text',
                 placeholder: "example",
-                value: values?.email?.find((_, index) => index === 0) ?? "",
+                value: findElement(values?.email, 0) ?? "",
                 onChange: onChanges('email', 0),
                 tail: {
                     text: '@',
@@ -93,13 +93,13 @@ export const createEmailInput = (
             {
                 type: 'text',
                 placeholder: "",
-                value: values?.email?.find((_, index) => index === 1) ?? "",
+                value: findElement(values?.email, 1) ?? "",
                 onChange: onChanges('email', 1)
             },
             {
                 type: 'select',
                 placeholder: "",
-                value: values?.email?.find((_, index) => index === 2) ?? "",
+                value: findElement(values?.email, 2) ?? "",
                 onChange: onChanges('email', 2),
                 options: [
                     { text: 'gmail.com' },
@@ -120,6 +120,7 @@ export const createEmailInput = (
 
 export const createCustomSelector = (
     label: string,
+    key: string,
     values: CurrentUser | undefined, 
     onChanges: (key: string, index?: number) => (value: string) => void,
     options: { text: string }[]
@@ -130,8 +131,8 @@ export const createCustomSelector = (
             {
                 type: 'select',
                 placeholder: "",
-                value: values !== undefined ? values[label] : "",
-                onChange: onChanges(label),
+                value: values !== undefined ? values[key] : "",
+                onChange: onChanges(key),
                 options: options
             }
         ]

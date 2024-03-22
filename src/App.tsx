@@ -10,7 +10,7 @@ function App() {
       <Routes>
         <Route path="/"element={<Main axiosMode={axiosMode}/>}/>
         <Route path="/login" element={<Login axiosMode={axiosMode}/>} />
-        <Route path="/signup" element={<SignUp axiosMode={axiosMode}/>} />
+        <Route path="/signup" element={<SignUp/>} />
         <Route path="/user-info" element={<UserInformation axiosMode={axiosMode}/>} />
         <Route path="/manage">
           <Route path="patients-table" element={<PatientsTablePage axiosMode={axiosMode}/>} />

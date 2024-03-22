@@ -4,16 +4,13 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup'
 import { useNavigate } from "react-router-dom";
-import { useRequestAPI } from "../api/commons/request";
-import { InputLine } from "../components/commons/InputLine";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import styles from './SignUp.module.css'
 import classNames from 'classnames/bind';
 
-const SignUp = ({axiosMode}: {axiosMode: boolean}) => {
+const SignUp = () => {
 	const cx = classNames.bind(styles)
 	const navigate = useNavigate()
-	const request = useRequestAPI()
 
 	const [FirstName, setFirstName] = useState("")
 	const [SecondName, setSecondName] = useState("")
@@ -24,8 +21,6 @@ const SignUp = ({axiosMode}: {axiosMode: boolean}) => {
 	const [showPswd, setShowPswd] = useState("")
 	const [selectedPosition, setSelectedPosition] = useState("원장")
 	const [selectedDepartment, setSelectedDepartment] = useState("통증")
-
-	const [accessToken, setAccessToken] = useState("") // 액세스 토큰 상태 추가
 
 	const [isTriedToSignUp, setIsTriedToSignUp] = useState(false) // 회원 가입 시도 여부
 	const [isFormValid, setIsFormValid] = useState({name: false, phoneN: false, email: false, passw: false, passwC: false})
@@ -79,7 +74,6 @@ const SignUp = ({axiosMode}: {axiosMode: boolean}) => {
 		)
 
 		const token = response.data
-		setAccessToken(token) // 액세스 토큰을 상태로 저장
 
 		console.log("성공 - 액세스 토큰:", token)
 		alert("회원가입 성공!");
