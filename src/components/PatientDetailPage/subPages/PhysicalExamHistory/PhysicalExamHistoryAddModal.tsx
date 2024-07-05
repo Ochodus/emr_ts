@@ -1,15 +1,12 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import Modal from 'react-bootstrap/Modal'
 import InputGroup from 'react-bootstrap/InputGroup'
 import Form from 'react-bootstrap/Form'
 import Button from 'react-bootstrap/Button'
-import Multiselect from 'multiselect-react-dropdown'
 import { useLocalTokenValidation } from '../../../../api/commons/auth'
 import styles from './PhysicalExamHistoryAddModal.module.css'
 import classNames from 'classnames/bind'
-import { Changes, PhysicalExam } from './PhysicalExamHistory'
-import { Table } from '../../../commons'
-import { useRowState } from 'react-table'
+import { PhysicalExam } from '../../../../interfaces' 
 
 interface PhysicalExamAddModalProps {
     show: boolean, 
@@ -19,7 +16,13 @@ interface PhysicalExamAddModalProps {
     handleClose: () => void, 
 }
 
-const PhysicalExamHistoryAddModal = ({ show, isNew, selectedPhysicalExam, addFunction, handleClose }: PhysicalExamAddModalProps) => {
+const PhysicalExamHistoryAddModal = ({ 
+    show, 
+    isNew, 
+    selectedPhysicalExam, 
+    addFunction, 
+    handleClose 
+}: PhysicalExamAddModalProps) => {
     const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
     const cx = classNames.bind(styles);
 

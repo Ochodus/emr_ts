@@ -109,7 +109,7 @@ export const createDoctorSelector = (
         values, 
         onChanges, 
         options.map((user) => { 
-            return { text: `${user.last_name}${user.first_name}`, value: `${user.last_name}${user.first_name}` }
+            return { text: `${user.last_name}${user.first_name}`, value: `${user.id}` }
         }),
         'doctor',
         'pat'

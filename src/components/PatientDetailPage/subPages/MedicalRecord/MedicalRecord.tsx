@@ -11,7 +11,18 @@ import styles from './MedicalRecord.module.css';
 import classNames from 'classnames/bind';
 import { PhysicalExam } from "../../../../interfaces";
 
-export interface MedicalRecord {
+import dayjs from 'dayjs'
+import isLeapYear from 'dayjs/plugin/isLeapYear'
+import utc from "dayjs/plugin/utc"
+import 'dayjs/locale/ko'
+import { TableMui } from "../../../commons";
+import { HeadCell, ID } from "../../../commons/TableMui";
+
+dayjs.extend(isLeapYear)
+dayjs.extend(utc)
+dayjs.locale('ko')
+
+export interface Inspection {
 	symptoms: string[],
 	diagnostics: string[],
 	memo: string,
@@ -22,16 +33,38 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 	const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
 	const cx = classNames.bind(styles)
 
+	const headCells: HeadCell<Inspection & ID>[] = [
+		{
+		  id: 'recorded',
+		  numeric: false,
+		  label: '일자',
+		},
+		{
+		  id: 'symptoms',
+		  numeric: true,
+		  label: '증상',
+		},
+		{
+		  id: 'diagnostics',
+		  numeric: true,
+		  label: '진단',
+		},
+		{
+		  id: 'memo',
+		  numeric: true,
+		  label: '비고',
+		}
+	  ];
+	
 	const headers: TableHeader = [
 		{ 
 			Header: "진료 날짜",
 			accessor: "recorded",
 			Cell: ({ row }) => {
-				let dateArray = row.original.recorded.split(/[TZ]/)[0].split('-')
-				let timeArray = row.original.recorded.split(/[TZ]/)[1].split(':')
+				let day = dayjs(row.original.recorded)
 				return (
 					<div>
-						{`${dateArray[0]}년 ${dateArray[1]}월 ${dateArray[2]}일  ${timeArray[0]}시 ${timeArray[1]}분`}
+						{day.format('YYYY-MM-DD HH:mm')}
 					</div>
 				)
 			},
@@ -92,7 +125,7 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 		}
 	}, [accessToken])
 
-	const [medicalRecords, setMedicalRecords] = useState<(MedicalRecord & {id: number})[]>([]);
+	const [medicalRecords, setMedicalRecords] = useState<(Inspection & ID)[]>([]);
 
 	const [isModalVisible, setIsModalVisible] = useState(false) // 환자 추가/편집 모달 표시 여부
 	const [isNewRecord, setIsNewRecord] = useState(false) // 모달의 추가/편집 모드
@@ -112,7 +145,7 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 		}
 	}, [config])
 	
-	const postMedicalRecord = async (newMedicalRecord: MedicalRecord, isNewRecord: boolean) => {
+	const postMedicalRecord = async (newMedicalRecord: Inspection, isNewRecord: boolean) => {
 		try {
 			isNewRecord || !medicalRecords ? await axios.post(url, newMedicalRecord, config) : await axios.patch(`${url}/${medicalRecords[targetRecordIndex].id}`, newMedicalRecord, config)
 		  	console.log("진료 기록 추가 성공");
@@ -203,14 +236,10 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 					axiosMode={axiosMode}
 				></MedicalRecordAddModal>
 			</div> :
-			<div className={cx("section-body")}>
-				<Table 
-					headers={headers} 
-					items={medicalRecords} 
-					useSelector={true}
-					table_width="calc(100% - 20px)"
-				/>
-			</div>
+			<TableMui<Inspection & ID>
+				headCells={headCells} 
+				rows={medicalRecords} 
+			/>
 			}
 		</div>
 	)

@@ -20,7 +20,7 @@ export const createUserNameInput = (
                 type: 'text',
                 placeholder: "이름",
                 value: findElement(values?.name, 1) ?? "",
-                onChange: onChanges('name', 0)
+                onChange: onChanges('name', 1)
             }
         ],
         invalidMsg: {

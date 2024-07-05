@@ -113,3 +113,7 @@ div:has(.menu) {
 div:has(.menu) svg {
     color: rgb(187, 187, 187);
 }
+
+.cardSelection>a:focus-visible {
+    outline: none;
+}

@@ -9,9 +9,7 @@ import 'react-date-range-ts/dist/theme/default.css';
 import styles from './TestSelectCard.module.css';
 import classNames from 'classnames/bind';
 import BloodInspectionAddModal from "./BloodInspectionAddModal";
-import SurveyTypeSelectModal from "./SurveyTypeSelectModal";
-import SurveyAddModalAdult from "./SurveyAddModalAdult";
-import SurveyAddModalChild from "./SurveyAddModalChild";
+import SurveyAddModal from "./SurveyAddModal";
 import PodoscopeAddModal from "./PodoscopeAddModal";
 import PhysicalPerformanceAddModal from "./PhysicalPerformanceAddModal";
 import AlignmentAddModal from "./AlignmentAddModal";
@@ -20,8 +18,6 @@ import FlatWalkingVideoAddModal from "./FlatWalkingVideoAddModal";
 
 const TestSelectCard = ({ type, handleHistoryShow }: { type: string, handleHistoryShow: (value: string) => void }) => {
     const [show, setShow] = useState(false)
-    const [showAdult, setShowAdult] = useState(false)
-    const [showChild, setShowChild] = useState(false)
 
     const handleShow = () => {
         setShow(true)
@@ -29,21 +25,7 @@ const TestSelectCard = ({ type, handleHistoryShow }: { type: string, handleHisto
 
     const handleClose = () => {
         setShow(false)
-        setShowAdult(false)
-        setShowChild(false)
     }
-
-    const handleShowAdult = () => {
-        setShow(false)
-        setShowAdult(true)
-    }
-
-    const handleShowChild = () => {
-        setShow(false)
-        setShowChild(true)
-    }
-
-    
     
     const cx = classNames.bind(styles);
 
@@ -56,7 +38,7 @@ const TestSelectCard = ({ type, handleHistoryShow }: { type: string, handleHisto
                 </Card.Body>
                 <Card.Footer>
                     <Button style={{ width: "45%" }} onClick={handleShow}>추가</Button>
-                    <Button variant="secondary" onClick={(e) => handleHistoryShow(type)} style={{ width: "45%", float: "right" }} >기록 확인</Button>
+                    <Button variant="secondary" onClick={() => handleHistoryShow(type)} style={{ width: "45%", float: "right" }} >기록 확인</Button>
                 </Card.Footer>
                 { type === "IMOOVE" && 
                     <ImooveAddModal cv={cv}
@@ -94,16 +76,11 @@ const TestSelectCard = ({ type, handleHistoryShow }: { type: string, handleHisto
                     />
                 }
                 { type === "설문지" && 
-                    <SurveyTypeSelectModal 
+                    <SurveyAddModal 
                         show={show} 
-                        handleShowAdult={handleShowAdult} 
-                        handleShowChild={handleShowChild} 
-                        handleClose={handleClose} 
+                        handleClose={handleClose}
                     />
                 }
-                { showAdult && <SurveyAddModalAdult cv={cv} show={showAdult} handleClose={handleClose}/> }
-
-                { showChild && <SurveyAddModalChild cv={cv} show={showChild} handleClose={handleClose}/> }
                 { type === "족저경" && 
                     <PodoscopeAddModal cv={cv}
                         show={show}
@@ -111,7 +88,7 @@ const TestSelectCard = ({ type, handleHistoryShow }: { type: string, handleHisto
                     />
                 }
                 { type === "운동능력 검사" && 
-                    <PhysicalPerformanceAddModal cv={cv}
+                    <PhysicalPerformanceAddModal
                         show={show}
                         handleClose={handleClose}
                     />

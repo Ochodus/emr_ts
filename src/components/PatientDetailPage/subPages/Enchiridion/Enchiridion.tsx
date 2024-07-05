@@ -48,6 +48,7 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 
 	const handleEnchiridionNumberChange = async (number: string) => {
 		setEnchiridionNumber(number)
+		console.log(enchiridionList)
 		if (+number === -1) {
 			setFileUrl("") 
 			setFileUrlAlt("")
@@ -59,31 +60,9 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 			if (url.includes(' ')) {
 				setFileUrl(url.split(' ')[0])
 				setFileUrlAlt(url.split(' ')[1])
-					// let setImages = [setImage, setImageAlt];
-					// [fileUrl, fileUrlAlt].map(async (furl, index) => {
-					// 	try {
-					// 		const response = await axios.get(
-					// 			`${furl}`,
-					// 			config
-					// 		)
-					// 		setImages[index](response.data)
-					// 	} catch (error) {
-					// 		console.log(index)
-					// 		console.error("기록 조회 중 오류 발생:", error)
-					// 	}
-					// })
 			}
 			else {
 				setFileUrl(enchiridionList[+number].file_url)
-				// try {
-				// 	const response = await axios.get(
-				// 		`${enchiridionList[+number].file_url}`,
-				// 		config
-				// 	)
-				// 	setImage(response.data)
-				// } catch (error) {
-				// 	console.error("기록 조회 중 오류 발생:", error)
-				// }
 			}
 		}
 	}
@@ -108,7 +87,6 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
             `,
 				config
 			)
-			console.log(response.data)
 			setEnchiridionList(response.data)
 		} catch (error) {
 			console.error("기록 조회 중 오류 발생:", error)
@@ -165,7 +143,7 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 						</div>
 						<div className={cx("section-body")}>
 							<img style={{ width: '100%'}} src={fileUrl}></img>
-							{enchiridionType === 'InBody' ? <img style={{ width: '100%'}} src={fileUrlAlt}></img> : null}
+							{enchiridionType === 'InBody' || enchiridionType === "Lookin' Body" ? <img style={{ width: '100%'}} src={fileUrlAlt}></img> : null}
 						</div>
 					</Card.Body>
 					<Card.Footer>

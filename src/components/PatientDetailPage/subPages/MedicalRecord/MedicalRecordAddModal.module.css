@@ -80,6 +80,14 @@ select {
     margin: auto;
 }
 
+div:has(.multiselector) {
+    width: 100%;
+}
+
+.multiselector {
+    border-radius: 0px;
+}
+
 .patientId[type=number]::-webkit-inner-spin-button,
 .patientId[type=number]::-webkit-outer-spin-button,
 .phoneNumber[type=number]::-webkit-inner-spin-button,
@@ -87,4 +95,9 @@ select {
 .postalCode[type=number]::-webkit-inner-spin-button,
 .postalCode[type=number]::-webkit-inner-spin-button {
     -webkit-appearance: none;
+}
+
+.dateTimePicker {
+    width: 100%;
+    border-radius: 5px;
 }

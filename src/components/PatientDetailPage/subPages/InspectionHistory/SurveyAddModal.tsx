@@ -9,14 +9,14 @@ import { useDateTimeParser } from '../../../../api/commons/dateTimeParse'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
 
-const PodoscopeAddModal = ({show, handleClose, isNew=true}: { show: boolean, handleClose: () => void, isNew?: boolean, cv: any }) => {
+const SurveyAddModal = ({show, handleClose, isNew=true}: { show: boolean, handleClose: () => void, isNew?: boolean }) => {
     const cx = classNames.bind(styles)
     const dateParse = useDateTimeParser()
 
     const { patient_id } = useParams()
     const auth = window.localStorage.getItem("persist:auth")
 	const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
-	const url = `/api/patients/${patient_id}/medical/inspections/podoscope`
+	const url = `/api/patients/${patient_id}/medical/inspections/survey`
 
     const config = useMemo(() => {
 		return {
@@ -65,7 +65,7 @@ const PodoscopeAddModal = ({show, handleClose, isNew=true}: { show: boolean, han
             <Modal.Header closeButton>
                 <Modal.Title>
                     <span className={cx("title")}>
-                        <strong>족저경</strong>
+                        <strong>설문지</strong>
                     </span>
                 </Modal.Title>
             </Modal.Header>
@@ -130,4 +130,4 @@ const PodoscopeAddModal = ({show, handleClose, isNew=true}: { show: boolean, han
     )
 }
 
-export default PodoscopeAddModal
+export default SurveyAddModal

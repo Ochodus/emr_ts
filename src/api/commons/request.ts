@@ -1,6 +1,8 @@
 import { useCallback } from "react";
 import axios from 'axios';
 
+export const auth = window.localStorage.getItem("persist:auth")
+export const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
 
 export const useRequestAPI = () => {
     const auth = window.localStorage.getItem("persist:auth")

@@ -10,6 +10,13 @@ import { useLocalTokenValidation } from "../../../../api/commons/auth";
 import styles from './ReportHistory.module.css';
 import classNames from 'classnames/bind';
 
+export interface ChangeInfo {
+	start_value: number | object,
+	end_value: number | object,
+	importance: 'high'|'low'|'res',
+	target_dir: 'inc'|'dec'|'res'
+}
+
 export interface Changes {
 	name: string,
 	before_value: number,
@@ -110,12 +117,11 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 				config
 			)
 		
-			console.log(response.data);
 			setReportHistory(response.data);
 		} catch (error) {
 			console.error("진료 조회 중 오류 발생:", error);
 		}
-	}, [config])
+	}, [config, url])
 	
 	const postMedicalRecord = async (newReport: Report, isNewReport: boolean) => {
 		try {
@@ -153,12 +159,12 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 
 	useEffect(() => {
 		if (axiosMode) getReportHistory();
-	}, [getReportHistory]);
+	}, [getReportHistory, axiosMode]);
 
 	useEffect(() => {
 		let testMode = true
 		if ((process.env.NODE_ENV !== 'development' || testMode) && axiosMode) checkAuth()
-	  }, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
+	  }, [checkAuth, axiosMode]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
 
 	return (
 		<div>

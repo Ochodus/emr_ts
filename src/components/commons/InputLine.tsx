@@ -82,7 +82,7 @@ export const InputCell = ({fieldName, fieldProps, invalidMsg, style, tailCompone
                                 value={prop.value}
                                 id={`${prop.idPrefix}-${prop.name ?? ""}-${index}`}
                                 style={prop.style}
-                                onChange={(e) => {prop.onChange(e.target.value)}}
+                                onChange={(e) => {console.log(prop.value); prop.onChange(e.target.value)}}
                                 readOnly={prop.readOnly}
                             />
                             }

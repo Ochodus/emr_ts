@@ -30,7 +30,8 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 	
 	const [currentUser, setCurrentUser] = useState<CurrentUser>()
 
-	const [file, setFile] = useState("")
+	const [imgFile, setImgFile] = useState<File | null>()
+	const [preview, setPreview] = useState<string | null>(null)
 	const [isTriedToEdit, setIsTriedToEdit] = useState(false) // 회원 가입 시도 여부
 	const [isFormValid, setIsFormValid] = useState({
 		name: false,
@@ -89,16 +90,16 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 		return nameCheck && phoneNumberCheck && emailCheck
 	} // 회원 가입 폼 유효성 검사
 
-	const updateUserInformation = (data?: any) => {
+	const updateUserInformation = () => {
 		const userInformation: User = {
-			first_name: `${findElement(currentUser?.name, 0) ?? ""}`,
-			last_name: `${findElement(currentUser?.name, 1) ?? ""}`,
+			last_name: `${findElement(currentUser?.name, 0) ?? ""}`,
+			first_name: `${findElement(currentUser?.name, 1) ?? ""}`,
 			phone_number: `-${findElement(currentUser?.phoneNumber, 1)}-${findElement(currentUser?.phoneNumber, 2)}`,
 			email: `${findElement(currentUser?.email, 0)}@${findElement(currentUser?.email, 1)}`,
 			sex: +(currentUser?.gender ?? ""),
 			position: currentUser?.selectedPosition ?? "",
 			department: currentUser?.selectedDepartment ?? "",
-			profile_url: currentUser?.userIconUrl ?? "",
+			profile_url: preview !== null ? preview : ""
 		}
 
 		request(`/api/users`, 'patch', userInformation)
@@ -110,18 +111,35 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 			alert("유효하지 않은 입력 필드가 있습니다.")
 			return
 		}
-
-		if (file !== "") {
-			let formData = new FormData()
-        	formData.append('file', file ?? "")
-			request('/api/file', 'post', formData, updateUserInformation)
-		}
 		else updateUserInformation()
 	}
 
 	const triggerFileInput = () => {
 		document.getElementById('file-input')?.click()
 	}
+
+	const renderImg = (e: any) => {
+		if (e.target.files !== null) {
+			const file = e.target.files[0]
+			if (file && file.type.substring(0, 5) === 'image') {
+				setImgFile(file)
+			} else {
+				setImgFile(null)
+			}
+		}
+	}
+
+	useEffect(() => {
+		if (imgFile) {
+			const reader = new FileReader();
+			reader.onloadend = () => {
+				setPreview(reader.result as string)
+			}
+			reader.readAsDataURL(imgFile)
+		} else {
+			setPreview(null)
+		}
+	}, [imgFile])
 
 	useEffect(() => {
 		if (axiosMode) {
@@ -141,13 +159,15 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 						<img
 							id={cx('doctor-img')}
 							alt='프로필 사진'
-							src={currentUser?.userIconUrl === "" || !currentUser?.userIconUrl ? `${process.env.PUBLIC_URL}/images/userIcon.png` : currentUser?.userIconUrl}
+							src={
+								preview === null ? ((currentUser?.userIconUrl !== null || currentUser?.userIconUrl === "") ? currentUser?.userIconUrl : `${process.env.PUBLIC_URL}/images/userIcon.png`) : `${preview}`
+							}
 							style={{ flex: "column", height: '150px', width: '150px'}}
 						/>
 						<Form.Control
 							id="file-input"
 							type="file" 
-							onChange={(e: any) => {setFile(e.target.files[0])}}
+							onChange={(e) => renderImg(e)}
 							style={{ display: 'none' }}
                         />
 					</div>
@@ -169,7 +189,7 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 					<div className={cx("row-group")}>
 						<InputLine
 							inputCells={[
-								createCustomSelector('직위', 'selectedDepartment', currentUser, updateCurrentUser, [
+								createCustomSelector('직위', 'selectedPosition', currentUser, updateCurrentUser, [
 									{ text: '원장' },
 									{ text: '국장' },
 									{ text: '간호조무사' },
@@ -197,56 +217,3 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 };
 
 export default UserInformation;
-
-	//const [currentPassword, setCurrentPassword] = useState("");
-	//const [newPassword, setNewPassword] = useState("");
-	//const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
-
-/* <div className={cx("row-group")}>
-						<div className={cx("inline")}>
-							<div className={`${cx("cell")}`}>
-								<InputGroup>
-								<InputGroup.Text className={cx("input-label")}>비밀번호 변경</InputGroup.Text>
-								<Form.Control
-									type="password"
-									placeholder="현재 비밀번호"
-									value={currentPassword}
-									size="sm"
-									onChange={(e) => setCurrentPassword(e.target.value)}
-									autoComplete="new-password"
-								/>
-								</InputGroup>
-							</div>
-						</div>
-						<div className={cx("inline")}>
-							<div className={`${cx("cell")}`}>
-								<InputGroup>
-								<InputGroup.Text className={cx("input-label")}>새 비밀번호</InputGroup.Text>
-								<Form.Control
-									type="password"
-									placeholder="새 비밀번호"
-									value={newPassword}
-									size="sm"
-									onChange={(e) => setNewPassword(e.target.value)}
-								/>
-								</InputGroup>
-							</div>
-						</div>
-						<div className={cx("inline")}>
-							<div className={`${cx("cell")}`}>
-								<InputGroup>
-								<InputGroup.Text className={cx("input-label")}>비밀번호 확인</InputGroup.Text>
-								<Form.Control
-									type="password"
-									placeholder="새 비밀번호 확인"
-									value={newPasswordConfirm}
-									size="sm"
-									onChange={(e) => {
-									setNewPasswordConfirm(e.target.value)
-									}}
-								/>
-								</InputGroup>
-							</div>
-						</div>
-						{newPassword === newPasswordConfirm || newPasswordConfirm === "" ? null : <div className={cx("form-unvalid-msg")}>* 비밀번호가 일치하지 않습니다.</div>}
-					</div> */

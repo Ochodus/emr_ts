@@ -18,16 +18,28 @@ interface ExerciseHistoryAddModalProps {
     handleClose: () => void, 
 }
 
-const partList: string[] = [
-    "척추", 
-    "사지", 
-    "디테일"
-]
+const exerciseClassifier: {
+    [string: string]: {[string: string]: string[]}
+} = {
+    "upper extremity": {
+        "upper_limb": ["hand/wrist", "forearm", "elbow", "humerus", "shoulder", "shoulder gridle"]
+    },
+    "lower extremity": {
+        "lower_limb": ["pelvic", "hip joint", "thigh", "knee", "foot/ankle"]
+    },
+    "spine": {
+        "cervical": ["upper cervical", "lower cervical"],
+        "thoracic": ["upper thoracic", "lower thoracic", "rib"],
+        "lumbar": [],
+        "scoliosis": ["T-type", "L-type"],
+        "성장": [],
+        "자세": []
+    }
+}
 
-const exerciseList: string[] = [
-    "윗몸일으키기",
-    "팔굽혀펴기"
-]
+const exerciseName: string[] = ["mobility", "stability", "strengthening", "co-work", "coordination", " balance", "manual", "core", "rehabilitation", "schroth", "기타 (직접 작성)"]
+
+const trialAmountType: string[] = ["초", "횟수"] 
 
 interface User {
     id: number,
@@ -40,7 +52,7 @@ interface User {
     department: string
 }
 
-const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise: selectedExercise, addFunction, handleClose }: ExerciseHistoryAddModalProps) => {
+const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise, addFunction, handleClose }: ExerciseHistoryAddModalProps) => {
     const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
     const dateParser = useDateTimeParser()
     const cx = classNames.bind(styles);
@@ -58,16 +70,9 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise: selectedExerci
 
     const [progressedDate, setProgressedDate] = useState<string>(new Date().toLocaleDateString('en-CA'))
     const [totalTime, setTotalTime] = useState<string>("")
-
-    const [selectedPart, setSelectedPart] = useState<string>("")
-    const [selectedExerciseType, setSelectedExerciseType] = useState<string>("")
-    const [trialTime, setTrialTime] = useState("")
-    const [trialNumber, setTrialNumber] = useState("")
-    const [trialAmount, setTrialAmount] = useState("")
     
     const [trialExercises, setTrialExercises] = useState<Trial[]>([])
     const [userList, setUserList] = useState<User[]>([])
-    const [doctor, setDoctor] = useState<string>("")
     const [memo, setMemo] = useState<string>("")
 
     const renderSelected = () => {
@@ -116,7 +121,7 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise: selectedExerci
     useEffect(() => {
 		let testMode = true
 		if (process.env.NODE_ENV !== 'development' || testMode) checkAuth()
-	  }, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
+	}, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
 
     return (
         <Modal show={show} onShow={renderSelected} onHide={handleClose} size='xl'>
@@ -167,7 +172,7 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise: selectedExerci
                     </div>
                     <div className={cx("page-title")} style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>시행 운동 정보</span>
-                        <Button variant="secondary" onClick={(e) => setTrialExercises([...trialExercises, {}])}>추가</Button>
+                        <Button variant="secondary" onClick={() => setTrialExercises([...trialExercises, {primary_class: "upper extremity", secondary_class: "upper_limb", tertiary_class: "hand/wrist", exercise: "mobility", amount_type: "초"}])}>추가</Button>
                     </div>
                     {trialExercises.map((exercise, index) => {
                         return (
@@ -185,7 +190,6 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise: selectedExerci
                                                             {...exercise, therapist: e.target.value}, 
                                                             ...trialExercises.slice(index+1)])}
                                                     >
-                                                        <option key={-1} value={-1}>미지정</option>
                                                         {userList.map((user) => {
                                                             return (
                                                                 <option key={user.id} value={user.id}>{`${user.position} ${user.last_name}${user.first_name}`}</option>
@@ -198,16 +202,24 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise: selectedExerci
                                         <div className={cx("inline")}>
                                             <div className={`${cx("cell")}`}>
                                                 <InputGroup>
-                                                    <InputGroup.Text>시행 부위</InputGroup.Text>
+                                                    <InputGroup.Text>1단계 분류</InputGroup.Text>
                                                     <Form.Select
-                                                        value={exercise.area ?? ""}
-                                                        onChange={(e) => setTrialExercises([
-                                                            ...trialExercises.slice(0, index), 
-                                                            {...exercise, area: e.target.value}, 
-                                                            ...trialExercises.slice(index+1)])}
+                                                        value={exercise.primary_class ?? ""}
+                                                        onChange={(e) => {
+                                                            let initialSecondary = Object.keys(exerciseClassifier[e.target.value])[0]
+                                                            setTrialExercises([
+                                                                ...trialExercises.slice(0, index), 
+                                                                {
+                                                                    ...exercise, 
+                                                                    primary_class: e.target.value,
+                                                                    secondary_class: initialSecondary,
+                                                                    tertiary_class: Object.keys(exerciseClassifier[e.target.value][initialSecondary])[0]
+                                                                }, 
+                                                                ...trialExercises.slice(index+1)
+                                                            ])
+                                                        }}
                                                     >
-                                                        <option key={-1} value={-1}>미지정</option>
-                                                        {partList.map((part, index) => {
+                                                        {Object.keys(exerciseClassifier).map((part, index) => {
                                                             return (
                                                                 <option key={index} value={part}>{`${part}`}</option>
                                                             )
@@ -217,7 +229,51 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise: selectedExerci
                                             </div>
                                             <div className={`${cx("cell")}`}>
                                             <InputGroup>
-                                                    <InputGroup.Text>시행 운동</InputGroup.Text>
+                                                    <InputGroup.Text>2단계 분류</InputGroup.Text>
+                                                    <Form.Select
+                                                        value={exercise.secondary_class ?? ""}
+                                                        onChange={(e) => setTrialExercises([
+                                                            ...trialExercises.slice(0, index), 
+                                                            {
+                                                                ...exercise, 
+                                                                secondary_class: e.target.value,
+                                                                tertiary_class: Object.keys(exerciseClassifier[exercise.primary_class ?? ""][e.target.value])[0]
+                                                            }, 
+                                                            ...trialExercises.slice(index+1)])}
+                                                    >
+                                                        {Object.keys(exerciseClassifier[exercise.primary_class ?? ""]).map((part, index) => {
+                                                            return (
+                                                                <option key={index} value={part}>{`${part}`}</option>
+                                                                
+                                                            )
+                                                        })}
+                                                    </Form.Select>
+                                                </InputGroup>
+                                            </div>
+                                        </div>
+                                        <div className={cx("inline")}>
+                                            <div className={`${cx("cell")}`}>
+                                                <InputGroup>
+                                                    <InputGroup.Text>3단계 분류</InputGroup.Text>
+                                                    <Form.Select
+                                                        value={exercise.tertiary_class ?? ""}
+                                                        onChange={(e) => setTrialExercises([
+                                                            ...trialExercises.slice(0, index), 
+                                                            {...exercise, tertiary_class: e.target.value}, 
+                                                            ...trialExercises.slice(index+1)])}
+                                                        disabled={exerciseClassifier[exercise.primary_class ?? ""][exercise.secondary_class ?? ""].length === 0}
+                                                    >   
+                                                        {exerciseClassifier[exercise.primary_class ?? ""][exercise.secondary_class ?? ""].map((part, index) => {
+                                                            return (
+                                                                <option key={index} value={part}>{`${part}`}</option>
+                                                            )
+                                                        })}
+                                                    </Form.Select>
+                                                </InputGroup>
+                                            </div>
+                                            <div className={`${cx("cell")}`}>
+                                                <InputGroup>
+                                                    <InputGroup.Text>운동 이름</InputGroup.Text>
                                                     <Form.Select
                                                         value={exercise.exercise ?? ""}
                                                         onChange={(e) => setTrialExercises([
@@ -225,10 +281,9 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise: selectedExerci
                                                             {...exercise, exercise: e.target.value}, 
                                                             ...trialExercises.slice(index+1)])}
                                                     >
-                                                        <option key={-1} value={-1}>미지정</option>
-                                                        {exerciseList.map((exercise, index) => {
+                                                        {exerciseName.map((part, index) => {
                                                             return (
-                                                                <option key={index} value={exercise}>{`${exercise}`}</option>
+                                                                <option key={index} value={part}>{`${part}`}</option>
                                                             )
                                                         })}
                                                     </Form.Select>
@@ -238,17 +293,30 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise: selectedExerci
                                         <div className={cx("inline")}>
                                             <div className={`${cx("cell")}  ${cx("small")}`}>
                                                 <InputGroup>
-                                                    <InputGroup.Text>시행 시간</InputGroup.Text>
+                                                    <InputGroup.Text>세트 당</InputGroup.Text>
                                                     <Form.Control
                                                         type="number"
-                                                        placeholder="분"
-                                                        value={exercise.time_ms ?? ""}
+                                                        placeholder="수치"
+                                                        value={exercise.amount ?? ""}
                                                         onChange={(e) => setTrialExercises([
                                                             ...trialExercises.slice(0, index), 
-                                                            {...exercise, time_ms: e.target.value}, 
+                                                            {...exercise, amount: +e.target.value}, 
                                                             ...trialExercises.slice(index+1)])}
                                                     >
                                                     </Form.Control>
+                                                    <Form.Select
+                                                        value={exercise.amount_type ?? "초"}
+                                                        onChange={(e) => setTrialExercises([
+                                                            ...trialExercises.slice(0, index), 
+                                                            {...exercise, amount_type: e.target.value}, 
+                                                            ...trialExercises.slice(index+1)])}
+                                                    >
+                                                        {trialAmountType.map((part, index) => {
+                                                            return (
+                                                                <option key={index} value={part}>{`${part}`}</option>
+                                                            )
+                                                        })}
+                                                    </Form.Select>
                                                 </InputGroup>
                                             </div>
                                             <div className={`${cx("cell")} ${cx("small")}`}>
@@ -256,26 +324,11 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise: selectedExerci
                                                     <InputGroup.Text>시행 세트</InputGroup.Text>
                                                     <Form.Control
                                                         type="number"
-                                                        placeholder="회"
+                                                        placeholder={"세트"}
                                                         value={exercise.sets ?? ""}
                                                         onChange={(e) => setTrialExercises([
                                                             ...trialExercises.slice(0, index), 
                                                             {...exercise, sets: +e.target.value}, 
-                                                            ...trialExercises.slice(index+1)])}
-                                                    >
-                                                    </Form.Control>
-                                                </InputGroup>
-                                            </div>
-                                            <div className={`${cx("cell")} ${cx("small")}`}>
-                                                <InputGroup>
-                                                    <InputGroup.Text>세트 당 횟수</InputGroup.Text>
-                                                    <Form.Control
-                                                        type="number"
-                                                        placeholder="회"
-                                                        value={exercise.count_per_set ?? ""}
-                                                        onChange={(e) => setTrialExercises([
-                                                            ...trialExercises.slice(0, index), 
-                                                            {...exercise, count_per_set: +e.target.value}, 
                                                             ...trialExercises.slice(index+1)])}
                                                     >
                                                     </Form.Control>

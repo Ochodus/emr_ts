@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react'
-import OcrParser from '../../../commons/OcrParser'
 import Modal from 'react-bootstrap/Modal'
 import InputGroup from 'react-bootstrap/InputGroup'
 import Form from 'react-bootstrap/Form'
@@ -8,66 +7,100 @@ import Tab from 'react-bootstrap/Tab'
 import Tabs from 'react-bootstrap/Tabs'
 import styles from './PhysicalPerformanceAddModal.module.css'
 import classNames from 'classnames/bind'
-import axios from 'axios'
 import { useParams } from 'react-router-dom'
 import { useDateTimeParser } from '../../../../api/commons/dateTimeParse'
+import { BallBounce, DynamicMovement, FunctionalLine, PhysicalPerformance, YBalance } from './InspectionType.interface'
+import { Draft, produce } from 'immer'
+import { uploadData, uploadFiles } from './utils'
 
+type inspection = FunctionalLine | YBalance | BallBounce | DynamicMovement
+type inspectionUpdater<T extends inspection> = React.Dispatch<React.SetStateAction<T[]>>
 
-interface FunctionalLine {
-    [name: string]: number | number[] | string[] | undefined,
-    trialNumber: number,
-    rtrt?: number[] | string[],
-    rtlt?: number[] | string[],
-    ltrt?: number[] | string[],
-    ltlt?: number[] | string[]
+interface PhysicalPerformanceAddModalProps {
+    show: boolean, 
+    isNew?: boolean,
+    selectedPhysicalPerformance?: PhysicalPerformance & {id: number} | null 
+    handleClose: ()=> void,
 }
 
-interface YBalance {
-    [name: string]: number | number[] | string[] | undefined,
-    trialNumber: number,
-    rtat?: number[] | string[],
-    rtpl?: number[] | string[],
-    rtpm?: number[] | string[],
-    ltat?: number[] | string[],
-    ltpl?: number[] | string[],
-    ltpm?: number[] | string[]
+const initialFunctionalLine: FunctionalLine = {
+    trial_number: 0, 
+    rt: {
+        rt: {
+            rt: ["", ""], 
+            lt: ["", ""]
+        }, 
+        lt: {
+            rt: ["", ""], 
+            lt: ["", ""]
+        }
+    }, 
+    lt: {
+        rt: {
+            rt: ["", ""], 
+            lt: ["", ""]
+        }, 
+        lt: {
+            rt: ["", ""], 
+            lt: ["", ""]
+        }
+    }
 }
 
-interface BallBounce {
-    [name: string]: number | number[] | string[] | string | undefined,
-    trialNumber: number,
-    rt?: number[] | string[],
-    lt?: number[] | string[],
-    rtone?: number[] | string[],
-    rttwo?: number[] | string[],
-    rtthree?: number[] | string[],
-    ltone?: number[] | string[],
-    lttwo?: number[] | string[],
-    ltthree?: number[] | string[],
-    rtNote?: string,
-    ltNote?: string
+const initialYBalance: YBalance = {
+    trial_number: 0, 
+    rt: {
+        at: ["", ""], 
+        pl: ["", ""], 
+        pm: ["", ""]
+    }, 
+    lt: {
+        at: ["", ""], 
+        pl: ["", ""], 
+        pm: ["", ""]
+    }
 }
 
-interface DynamicMovement {
-    [name: string]: number | (number | string)[][] | string[] | string | undefined,
-    trialNumber: number,
-    evaluations: (number | string)[][],
-    evalNotes: string[]
+const initialBallBounce: BallBounce = {
+    trial_number: 0, 
+    rt: {
+        step: "", 
+        distance: "", 
+        trials: [
+            {time: "", amount: ""}, 
+            {time: "", amount: ""}, 
+            {time: "", amount: ""}
+        ], 
+        note: ""
+    }, 
+    lt: {step: "", 
+        distance: "", 
+        trials: [
+            {time: "", amount: ""}, 
+            {time: "", amount: ""}, 
+            {time: "", amount: ""}
+        ], 
+        note: ""
+    }
 }
 
-interface InspectionStates {
-    [name: string]: any
-    fl: [FunctionalLine[], React.Dispatch<React.SetStateAction<FunctionalLine[]>>],
-    yb: [YBalance[], React.Dispatch<React.SetStateAction<YBalance[]>>],
-    bb: [BallBounce[], React.Dispatch<React.SetStateAction<BallBounce[]>>],
-    dm: [DynamicMovement[], React.Dispatch<React.SetStateAction<DynamicMovement[]>>]
+const initialDynamicMovement: DynamicMovement = {
+    trial_number: 0, 
+    two_leg_jump: {time: "", note: ""}, 
+    side_step: {rt: "", lt: "", note: ""}, 
+    side_one_step_in_out: {rt: "", lt: "", note: ""}, 
+    side_two_step_in_out: {rt: "", lt: "", note: ""},
+    forward_side_to_step: {rt: "", lt: "", note: ""}, 
+    brasilian_step: {time: "", note: ""}, 
+    diagonal_line_run: {time: "", note: ""}
 }
 
-interface PhysicalPerformanceResult {
-    [name: string]: FunctionalLine
-}
-
-const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handleClose: ()=> void, isNew?: boolean, cv: any}) => {
+const PhysicalPerformanceAddModal = ({
+    show,
+    isNew=true,
+    selectedPhysicalPerformance=null,
+    handleClose, 
+}: PhysicalPerformanceAddModalProps) => {
     const cx = classNames.bind(styles)
     const dateParser = useDateTimeParser()
 
@@ -90,104 +123,86 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
     const [ballBounce, setBallBounce] = useState<BallBounce[]>([])
     const [dynamicMovement, setDynamicMovement] = useState<DynamicMovement[]>([])
 
-    const [selectedInspection, setSelectedInspection] = useState<string | null>("")
+    const [selectedInspection, setSelectedInspection] = useState<string>("functionalLine")
 
-    const [file, setFile] = useState<File>()
+    const [note, setNote] = useState<string>("")
 
-    const inspectionStates: any = {
-        fl: [functionalLines, setFunctionalLines],
-        yb: [yBalance, setYBalance],
-        bb: [ballBounce, setBallBounce],
-        dm: [dynamicMovement, setDynamicMovement]
+    const [file, setFile] = useState<File | null>(null)
+
+    const addInspections = <T extends inspection>(setInspection: inspectionUpdater<T>, initValue: T) => {
+        setInspection(prevObj =>
+            (produce(prevObj, draft => {
+                if (Array.isArray(draft)) draft.push(initValue as Draft<T>)
+            }))
+        )
     }
 
-    const addNewFunctionalLines = () => {
-        setFunctionalLines([...functionalLines, {trialNumber: functionalLines.length, rtrt: ["", "", "", ""], rtlt: ["", "", "", ""], ltrt: ["", "", "", ""], ltlt: ["", "", "", ""]}])
+    const deleteInspections = <T extends inspection>(setInspection: inspectionUpdater<T>, index: number) => {
+        setInspection(prevObj =>
+            (produce(prevObj, draft => {
+                draft.splice(index, 1)
+            }))
+        )
     }
 
-    const addNewYBalance = () => {
-        setYBalance([...yBalance, {trialNumber: yBalance.length, rtat: ["", "", "", ""], rtpl: ["", "", "", ""], rtpm: ["", "", "", ""], ltat: ["", "", "", ""], ltpl: ["", "", "", ""], ltpm: ["", "", "", ""]}])
-    }
-
-    const addNewBallBounce = () => {
-        setBallBounce([...ballBounce, {trialNumber: ballBounce.length, rt: ["", ""], lt: ["", ""], rtone: ["", ""], rttwo: ["", ""], rtthree: ["", ""], ltone: ["", ""], lttwo: ["", ""], ltthree: ["", ""], rtNote: "", ltNote: ""}])
-    }
-
-    const addNewDynamicMovement = () => {
-        setDynamicMovement([...dynamicMovement, {trialNumber: dynamicMovement.length, evaluations: [[""], ["", ""], ["", ""], ["", ""], ["", ""], [""], [""]], evalNotes: ["", "", "", "", "", "", ""]}])
-    }
-
-    const deleteFunctionalLines = (index: number, inspection: string) => {
-        if (inspection === 'fl') setFunctionalLines([...functionalLines.slice(0, index), ...functionalLines.slice(index + 1)])
-        if (inspection === 'yb') setYBalance([...yBalance.slice(0, index), ...yBalance.slice(index + 1)])
-        if (inspection === 'bb') setBallBounce([...ballBounce.slice(0, index), ...ballBounce.slice(index + 1)])
-        if (inspection === 'dm') setDynamicMovement([...dynamicMovement.slice(0, index), ...dynamicMovement.slice(index + 1)])
-    }
-
-    const updateInspection = (index: number, target: string, value: string, inspection: string, targetIndex?: number, twoDimIndex?: number) => {
-        let targetInspection = inspectionStates[inspection][0]
-        let targetInspectionDispatch = inspectionStates[inspection][1]
-        let updatedInspection = {...targetInspection[index]}
-        if (updatedInspection) {
-            let selectedField = updatedInspection?.[target] // number[]
-            if (Array.isArray(selectedField)) {
-                console.log(selectedField)
-                if (typeof targetIndex !== 'undefined') {
-                    console.log(selectedField[0])
-                    if (Array.isArray(selectedField[targetIndex])) {
-                        if (typeof twoDimIndex !== 'undefined') selectedField[targetIndex][twoDimIndex] = isNaN(+value) ? value : +value
-                    }
-                    else { selectedField[targetIndex] = isNaN(+value) ? value : +value }
-                }
-            }
-            else {
-                updatedInspection[target] = isNaN(+value) ? value : +value
-            }
-    
-            targetInspectionDispatch([...targetInspection.slice(0, index), updatedInspection, ...targetInspection.slice(index + 1)])
-            setFunctionalLines([...functionalLines.slice(0, index), updatedInspection, ...functionalLines.slice(index + 1)])
+    const updateInspection = <T,>(
+        draft: T, 
+        targetPath: (string | number)[], 
+        newValue: string
+    ) => {
+        if (targetPath.length === 1) {
+            draft[targetPath[0] as (keyof T)] = newValue as T[keyof T]
+        } else {
+            let newDraft = draft[targetPath[0] as (keyof T)]
+            updateInspection<typeof newDraft>(newDraft, targetPath.slice(1), newValue)
         }
     }
 
-    const onChangeOcrResult = (result: any) => {
-        console.log(result)
-
-        const parsedData: PhysicalPerformanceResult = {
-            fields: result.fields.split(/\n/),
-            exerciseNames: result.exerciseNames.split(/\n/),
-            values: result.values.split(/\n/),
-            ranges: result.ranges.split(/\n/),
-            note: result.note,
-            recommendation: result.recommendation
-        }
-
-        console.log(parsedData)
-
-        let inspectionLength = Math.max(+(parsedData.fields.length ?? 0), +(parsedData.exerciseNames.length ?? 0), +(parsedData.values.length ?? 0), +(parsedData.ranges.length ?? 0))
+    const updateDeepValue = <T extends inspection>(setInspection: inspectionUpdater<T>, targetPath: (string | number)[], newValue: string) => {
+        setInspection(prevObj =>
+            (produce(prevObj, draft => {
+                updateInspection(draft, targetPath, newValue)
+            }))
+        )
     }
 
     const addPhysicalPerformance = async () => {
-        const newPhysicalPerformance = {
-            file_url: "",
-            inspected: dateParser(date ?? new Date()),
-            content: {
-                name: "",
-                age: 0,
-                height: 0,
-                gender: 0,
-                inspections: functionalLines
-            },
-            detail: ""
-        }
-        try {
-            await axios.post(url, newPhysicalPerformance, config)
-                console.log("InBody 검사 기록 추가 성공");
-        } catch (error) {
-                console.error("InBody 검사 기록 추가 중 오류 발생:", error);
-        }
+        uploadFiles(selectedPhysicalPerformance, file, "운동능력검사", config).then((file_url) => { 
+            const newPhysicalPerformance: PhysicalPerformance = {
+                file_url: file_url,
+                inspected: dateParser(date ?? new Date()),
+                content: {
+                    name: "",
+                    age: 0,
+                    height: 0,
+                    gender: 0,
+                    functional_line: functionalLines,
+                    y_balance: yBalance,
+                    ball_bounce: ballBounce,
+                    dynamic_movement: dynamicMovement
+                },
+                detail: ""
+            }
+            
+            uploadData(isNew, url, newPhysicalPerformance, "운동능력검사", config, handleClose, selectedPhysicalPerformance?.id)
+        })
     }
 
     const renderSelected = () => {
+        if (selectedPhysicalPerformance) {
+            selectedPhysicalPerformance.content.functional_line.forEach((item) => {
+                addInspections(setFunctionalLines, item)
+            })
+            selectedPhysicalPerformance.content.y_balance.forEach((item) => {
+                addInspections(setYBalance, item)
+            })
+            selectedPhysicalPerformance.content.ball_bounce.forEach((item) => {
+                addInspections(setBallBounce, item)
+            })
+            selectedPhysicalPerformance.content.dynamic_movement.forEach((item) => {
+                addInspections(setDynamicMovement, item)
+            })
+        }
     }
 
     return (
@@ -207,33 +222,43 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                 <span>파일 업로드</span>
                             </div>
                             <div className={cx("inline")}>
-                                <div className={`${cx("cell")} ${cx("text-only")}`}>
-                                    <div className={`${cx("cell")} ${cx("smaller")}`}>
-                                        <OcrParser 
-                                            type={0} 
-                                            isMask={true} 
-                                            setOcrResult={onChangeOcrResult}
-                                            setFile={setFile}
-                                            cv={cv} 
-                                            smallSize={false}
-                                            indicator={1}
-                                            >
-                                        </OcrParser>
-                                    </div>
+                                <div className={`${cx("cell")} ${cx("large")}`}>
+                                <Form.Control
+                                    type="file" 
+                                    onChange={(e: any) => setFile(e.target.files[0])}
+                                />
                                 </div>
                             </div>
                         </div>
                         <div className={cx("group-field")}> 
                             <div className={cx("group-title")}>
+                                <span>검사일자</span>
+                            </div>
+                            <div className={cx("inline")}>
+                                <div className={`${cx("cell")}`}>
+                                    <InputGroup>
+                                        <InputGroup.Text>검사일자</InputGroup.Text>
+                                        <Form.Control
+                                            type='date'
+                                            value={date.toLocaleDateString('en-CA')}
+                                            onChange={(e) => {setDate(new Date(e.target.value))}}
+                                        >
+                                        </Form.Control>
+                                    </InputGroup>
+                                </div>
+                            </div> 
+                        </div>
+                        <div className={cx("group-field")}> 
+                            <div className={cx("group-title")}>
                                 <Tabs 
-                                    activeKey={selectedInspection ?? ""}
-                                    onSelect={(k) => setSelectedInspection(k)}
+                                    activeKey={selectedInspection}
+                                    onSelect={(k) => setSelectedInspection(k ?? 'functionalLine')}
                                     className="mb-3"
                                 >
-                                    <Tab eventKey="functinalLine" title="기능선 테스트">
+                                    <Tab eventKey="functionalLine" title="기능선 테스트">
                                         <div className={cx("group-content")}>
                                             <div style={{ borderBottom: '1px solid gray', padding: '20px' }}>
-                                                <img style={{ width: '100%', height: '500px' }}></img>
+                                                <img src={`${process.env.PUBLIC_URL}/images/inspectionIcon/functionalLine.png`} style={{ width: '100%', height: '500px' }} alt=''></img>
                                             </div>
                                             {functionalLines.map((inspection, index) => {
                                                 return (
@@ -243,8 +268,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                 <InputGroup.Text>회차</InputGroup.Text>
                                                                 <Form.Control
                                                                     type="number"
-                                                                    value={inspection.trialNumber ?? ""}
-                                                                    onChange={(e) => {updateInspection(index, "trialNumber", e.target.value, 'fl')}}
+                                                                    value={inspection.trial_number}
+                                                                    onChange={(e) => {updateDeepValue(setFunctionalLines, [index, "trial_number"], e.target.value)}}
                                                                 />
                                                             </InputGroup>
                                                         </div>
@@ -255,25 +280,25 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <InputGroup.Text>RT/RT</InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtrt ? inspection.rtrt[0] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtrt", e.target.value, 'fl', 0)}}
+                                                                            value={inspection.rt.rt.rt[0]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'rt', 'rt', 'rt', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtrt ? inspection.rtrt[1] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtrt", e.target.value, 'fl', 1)}}
+                                                                            value={inspection.rt.rt.rt[1]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'rt', 'rt', 'rt', 1], e.target.value)}}
                                                                         />
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtrt ? inspection.rtrt[2] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtrt", e.target.value, 'fl', 2)}}
+                                                                            value={inspection.rt.rt.lt[0]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'rt', 'rt', 'lt', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtrt ? inspection.rtrt[3] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtrt", e.target.value, 'fl', 3)}}
+                                                                            value={inspection.rt.rt.lt[1]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'rt', 'rt', 'lt', 1], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -282,28 +307,27 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <InputGroup.Text>RT/LT</InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtlt ? inspection.rtlt[0] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtlt", e.target.value, 'fl', 0)}}
+                                                                            value={inspection.rt.lt.rt[0]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'rt', 'lt', 'rt', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtlt ? inspection.rtlt[1] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtlt", e.target.value, 'fl', 1)}}
+                                                                            value={inspection.rt.lt.rt[1]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'rt', 'lt', 'rt', 1], e.target.value)}}
                                                                         />
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtlt ? inspection.rtlt[2] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtlt", e.target.value, 'fl', 2)}}
+                                                                            value={inspection.rt.lt.lt[0]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'rt', 'lt', 'lt', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtlt ? inspection.rtlt[3] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtlt", e.target.value, 'fl', 3)}}
+                                                                            value={inspection.rt.lt.lt[1]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'rt', 'lt', 'lt', 1], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
-                                                                    
                                                                 </div>
                                                             </div>
                                                             <div className={cx("inline")} style={{ display: 'flex' }}>
@@ -312,58 +336,58 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <InputGroup.Text>LT/RT</InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltrt ? inspection.ltrt[0] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltrt", e.target.value, 'fl', 0)}}
+                                                                            value={inspection.lt.rt.rt[0]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'lt', 'rt', 'rt', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltrt ? inspection.ltrt[1] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltrt", e.target.value, 'fl', 1)}}
+                                                                            value={inspection.lt.rt.rt[1]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'lt', 'rt', 'rt', 1], e.target.value)}}
                                                                         />
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltrt ? inspection.ltrt[2] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltrt", e.target.value, 'fl', 2)}}
+                                                                            value={inspection.lt.rt.lt[0]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'lt', 'rt', 'lt', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltrt ? inspection.ltrt[3] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltrt", e.target.value, 'fl', 3)}}
+                                                                            value={inspection.lt.rt.lt[1]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'lt', 'rt', 'lt', 1], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
                                                                 <div className={`${cx("cell")}`} style={{ width: '45%' }}>
-                                                                    <InputGroup>
+                                                                <InputGroup>
                                                                         <InputGroup.Text>LT/LT</InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltlt ? inspection.ltlt[0] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltlt", e.target.value, 'fl', 0)}}
+                                                                            value={inspection.lt.lt.rt[0]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'lt', 'lt', 'rt', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltlt ? inspection.ltlt[1] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltlt", e.target.value, 'fl', 1)}}
+                                                                            value={inspection.lt.lt.rt[1]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'lt', 'lt', 'rt', 1], e.target.value)}}
                                                                         />
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltlt ? inspection.ltlt[2] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltlt", e.target.value, 'fl', 2)}}
+                                                                            value={inspection.lt.lt.lt[0]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'lt', 'lt', 'lt', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltlt ? inspection.ltlt[3] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltlt", e.target.value, 'fl', 3)}}
+                                                                            value={inspection.lt.lt.lt[1]}
+                                                                            onChange={(e) => {updateDeepValue(setFunctionalLines, [index, 'lt', 'lt', 'lt', 1], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <Button className={`${cx("delete")}`} onClick={() => deleteFunctionalLines(index, 'fl')}>
+                                                        <Button className={`${cx("delete")}`} onClick={() => deleteInspections(setFunctionalLines, index)}>
                                                             -
                                                         </Button>
                                                     </div>
@@ -371,13 +395,13 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                             })}
                                         </div>
                                         <div style={{ padding: '10px 20px' }}>
-                                            <Button style={{ fontSize: '15px', width: '100%', margin: 'auto'}} variant={'secondary'} onClick={addNewFunctionalLines}> 추가 </Button>
+                                            <Button style={{ fontSize: '15px', width: '100%', margin: 'auto'}} variant={'secondary'} onClick={() => addInspections(setFunctionalLines, initialFunctionalLine)}> 추가 </Button>
                                         </div>
                                     </Tab>
                                     <Tab eventKey="yBalance" title="Y-Balance 테스트">
                                         <div className={cx("group-content")}>
                                             <div style={{ borderBottom: '1px solid gray', padding: '20px' }}>
-                                                <img style={{ width: '100%', height: '500px' }}></img>
+                                                <img src={`${process.env.PUBLIC_URL}/images/inspectionIcon/yBalance.png`} style={{ width: '100%', height: '500px' }} alt=''></img>
                                             </div>
                                             {yBalance.map((inspection, index) => {
                                                 return (
@@ -387,8 +411,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                 <InputGroup.Text>회차</InputGroup.Text>
                                                                 <Form.Control
                                                                     type="number"
-                                                                    value={inspection.trialNumber ?? ""}
-                                                                    onChange={(e) => {updateInspection(index, "trialNumber", e.target.value, 'yb')}}
+                                                                    value={inspection.trial_number ?? ""}
+                                                                    onChange={(e) => {updateDeepValue(setYBalance, [index, 'trial_number'], e.target.value)}}
                                                                 />
                                                             </InputGroup>
                                                         </div>
@@ -399,14 +423,14 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <InputGroup.Text>RT/AT</InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtat ? inspection.rtat[0] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtat", e.target.value, 'yb', 0)}}
+                                                                            value={inspection.rt.at[0]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'rt', 'at', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtat ? inspection.rtat[1] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtat", e.target.value, 'yb', 1)}}
+                                                                            value={inspection.rt.at[1]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'rt', 'at', 1], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -415,14 +439,14 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <InputGroup.Text>RT/PL</InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtpl ? inspection.rtpl[0] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtpl", e.target.value, 'yb', 0)}}
+                                                                            value={inspection.rt.pl[0]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'rt', 'pl', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtpl ? inspection.rtpl[1] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtpl", e.target.value, 'yb', 1)}}
+                                                                            value={inspection.rt.pl[1]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'rt', 'pl', 1], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -431,14 +455,14 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <InputGroup.Text>RT/PM</InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtpm ? inspection.rtpm[0] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtpm", e.target.value, 'yb', 0)}}
+                                                                            value={inspection.rt.pm[0]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'rt', 'pm', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.rtpm ? inspection.rtpm[1] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "rtpm", e.target.value, 'yb', 1)}}
+                                                                            value={inspection.rt.pm[1]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'rt', 'pm', 1], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -449,14 +473,14 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <InputGroup.Text>LT/AT</InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltat ? inspection.ltat[0] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltat", e.target.value, 'yb', 0)}}
+                                                                            value={inspection.lt.at[0]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'lt', 'at', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltat ? inspection.ltat[1] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltat", e.target.value, 'yb', 1)}}
+                                                                            value={inspection.lt.at[1]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'lt', 'at', 1], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -465,14 +489,14 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <InputGroup.Text>LT/PL</InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltpl ? inspection.ltpl[0] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltpl", e.target.value, 'yb', 0)}}
+                                                                            value={inspection.lt.pl[0]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'lt', 'pl', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltpl ? inspection.ltpl[1] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltpl", e.target.value, 'yb', 1)}}
+                                                                            value={inspection.lt.pl[1]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'lt', 'pl', 1], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -481,20 +505,20 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <InputGroup.Text>LT/PM</InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltpm ? inspection.ltpm[0] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltpm", e.target.value, 'yb', 0)}}
+                                                                            value={inspection.lt.pm[0]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'lt', 'pm', 0], e.target.value)}}
                                                                         />
                                                                         <div className={cx("dash")}> , </div>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.ltpm ? inspection.ltpm[1] : ""}
-                                                                            onChange={(e) => {updateInspection(index, "ltpm", e.target.value, 'yb', 1)}}
+                                                                            value={inspection.lt.pm[1]}
+                                                                            onChange={(e) => {updateDeepValue(setYBalance, [index, 'lt', 'pm', 1], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <Button className={`${cx("delete")}`} onClick={() => deleteFunctionalLines(index, 'yb')}>
+                                                        <Button className={`${cx("delete")}`} onClick={() => deleteInspections(setYBalance, index)}>
                                                             -
                                                         </Button>
                                                     </div>
@@ -502,7 +526,7 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                             })}
                                         </div>
                                         <div style={{ padding: '10px 20px' }}>
-                                            <Button style={{ fontSize: '15px', width: '100%', margin: 'auto'}} variant={'secondary'} onClick={addNewYBalance}> 추가 </Button>
+                                            <Button style={{ fontSize: '15px', width: '100%', margin: 'auto'}} variant={'secondary'} onClick={() => addInspections(setYBalance, initialYBalance)}> 추가 </Button>
                                         </div>
                                     </Tab>
                                     <Tab eventKey="ballBounce" title="Ball Bounce">
@@ -515,8 +539,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                 <InputGroup.Text>회차</InputGroup.Text>
                                                                 <Form.Control
                                                                     type="number"
-                                                                    value={inspection.trialNumber ?? ""}
-                                                                    onChange={(e) => {updateInspection(index, "trialNumber", e.target.value, 'bb')}}
+                                                                    value={inspection.trial_number ?? ""}
+                                                                    onChange={(e) => {updateDeepValue(setBallBounce, [index, 'trial_number'], e.target.value)}}
                                                                 />
                                                             </InputGroup>
                                                         </div>
@@ -534,14 +558,14 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                                         <div className={cx(`unit`)}>{'('}</div>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.rt ? inspection.rt[0] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "rt", e.target.value, 'bb', 0)}}
+                                                                                            value={inspection.rt.step}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'rt', 'step'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>단계, </div>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.rt ? inspection.rt[1] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "rt", e.target.value, 'bb', 1)}}
+                                                                                            value={inspection.rt.distance}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'rt', 'distance'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>{'cm)'}</div>
                                                                                     </div>                                                                    
@@ -559,14 +583,14 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                                     <div className={cx(`amountField`)}>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.rtone ? inspection.rtone[0] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "rtone", e.target.value, 'bb', 0)}}
+                                                                                            value={inspection.rt.trials[0].time}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'rt', 'trials', 0, 'time'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>초 / </div>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.rtone ? inspection.rtone[1] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "rtone", e.target.value, 'bb', 1)}}
+                                                                                            value={inspection.rt.trials[0].amount}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'rt', 'trials', 0, 'amount'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>개</div>
                                                                                     </div>                                                                    
@@ -580,16 +604,16 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                                     <div className={cx(`amountField`)}>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.rttwo ? inspection.rttwo[0] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "rttwo", e.target.value, 'bb', 0)}}
+                                                                                            value={inspection.rt.trials[1].time}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'rt', 'trials', 1, 'time'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>
                                                                                             초 / 
                                                                                         </div>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.rttwo ? inspection.rttwo[1] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "rttwo", e.target.value, 'bb', 1)}}
+                                                                                            value={inspection.rt.trials[1].amount}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'rt', 'trials', 1, 'amount'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>
                                                                                             개
@@ -605,16 +629,16 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                                     <div className={cx(`amountField`)}>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.rtthree ? inspection.rtthree[0] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "rtthree", e.target.value, 'bb', 0)}}
+                                                                                            value={inspection.rt.trials[2].time}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'rt', 'trials', 2, 'time'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>
                                                                                             초 / 
                                                                                         </div>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.rtthree ? inspection.rtthree[1] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "rtthree", e.target.value, 'bb', 1)}}
+                                                                                            value={inspection.rt.trials[2].amount}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'rt', 'trials', 2, 'amount'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>
                                                                                             개
@@ -637,14 +661,14 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                                         <div className={cx(`unit`)}>{'('}</div>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.lt ? inspection.lt[0] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "lt", e.target.value, 'bb', 0)}}
+                                                                                            value={inspection.lt.step}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'lt', 'step'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>단계, </div>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.lt ? inspection.lt[1] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "lt", e.target.value, 'bb', 1)}}
+                                                                                            value={inspection.lt.distance}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'lt', 'distance'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>{'cm)'}</div>
                                                                                     </div>                                                                    
@@ -662,14 +686,14 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                                     <div className={cx(`amountField`)}>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.ltone ? inspection.ltone[0] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "ltone", e.target.value, 'bb', 0)}}
+                                                                                            value={inspection.lt.trials[0].time}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'lt', 'trials', 0, 'time'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>초 / </div>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.ltone ? inspection.ltone[1] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "ltone", e.target.value, 'bb', 1)}}
+                                                                                            value={inspection.lt.trials[0].amount}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'lt', 'trials', 0, 'amount'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>개</div>
                                                                                     </div>                                                                    
@@ -683,16 +707,16 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                                     <div className={cx(`amountField`)}>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.lttwo ? inspection.lttwo[0] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "lttwo", e.target.value, 'bb', 0)}}
+                                                                                            value={inspection.lt.trials[1].time}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'lt', 'trials', 1, 'time'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>
                                                                                             초 / 
                                                                                         </div>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.lttwo ? inspection.lttwo[1] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "lttwo", e.target.value, 'bb', 1)}}
+                                                                                            value={inspection.lt.trials[1].amount}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'lt', 'trials', 1, 'amount'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>
                                                                                             개
@@ -708,16 +732,16 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                                     <div className={cx(`amountField`)}>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.ltthree ? inspection.ltthree[0] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "ltthree", e.target.value, 'bb', 0)}}
+                                                                                            value={inspection.lt.trials[2].time}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'lt', 'trials', 2, 'time'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>
                                                                                             초 / 
                                                                                         </div>
                                                                                         <Form.Control
                                                                                             type="number"
-                                                                                            value={inspection.ltthree ? inspection.ltthree[1] : ""}
-                                                                                            onChange={(e) => {updateInspection(index, "ltthree", e.target.value, 'bb', 1)}}
+                                                                                            value={inspection.lt.trials[2].amount}
+                                                                                            onChange={(e) => {updateDeepValue(setBallBounce, [index, 'lt', 'trials', 2, 'amount'], e.target.value)}}
                                                                                         />
                                                                                         <div className={cx(`unit`)}>
                                                                                             개
@@ -746,9 +770,9 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                                 <div className={cx(`amountField`)}>
                                                                                     <Form.Control
                                                                                         type="text"
-                                                                                        value={inspection.rtNote ? inspection.rtNote : ""}
+                                                                                        value={inspection.rt.note}
                                                                                         placeholder='내용을 입력해주세요'
-                                                                                        onChange={(e) => {updateInspection(index, "rtNote", e.target.value, 'bb')}}
+                                                                                        onChange={(e) => {updateDeepValue(setBallBounce, [index, 'rt', 'note'], e.target.value)}}
                                                                                     />
                                                                                 </div>                                                                     
                                                                             </td>
@@ -761,9 +785,9 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                                 <div className={cx(`amountField`)}>
                                                                                     <Form.Control
                                                                                         type="text"
-                                                                                        value={inspection.ltNote ? inspection.ltNote : ""}
+                                                                                        value={inspection.lt.note}
                                                                                         placeholder='내용을 입력해주세요'
-                                                                                        onChange={(e) => {updateInspection(index, "ltNote", e.target.value, 'bb')}}
+                                                                                        onChange={(e) => {updateDeepValue(setBallBounce, [index, 'lt', 'note'], e.target.value)}}
                                                                                     />
                                                                                 </div>                                                                    
                                                                             </td>
@@ -772,7 +796,7 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                 </table>
                                                             </div>
                                                         </div>
-                                                        <Button className={`${cx("delete")}`} onClick={() => deleteFunctionalLines(index, 'bb')}>
+                                                        <Button className={`${cx("delete")}`} onClick={() => deleteInspections(setBallBounce, index)}>
                                                             -
                                                         </Button>
                                                     </div>
@@ -780,7 +804,7 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                             })}
                                         </div>
                                         <div style={{ padding: '10px 20px' }}>
-                                            <Button style={{ fontSize: '15px', width: '100%', margin: 'auto'}} variant={'secondary'} onClick={addNewBallBounce}> 추가 </Button>
+                                            <Button style={{ fontSize: '15px', width: '100%', margin: 'auto'}} variant={'secondary'} onClick={() => addInspections(setBallBounce, initialBallBounce)}> 추가 </Button>
                                         </div>
                                     </Tab>
                                     <Tab eventKey="dynamicMovement" title="동적 움직임 평가">
@@ -793,8 +817,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                 <InputGroup.Text>회차</InputGroup.Text>
                                                                 <Form.Control
                                                                     type="number"
-                                                                    value={inspection.trialNumber ?? ""}
-                                                                    onChange={(e) => {updateInspection(index, "trialNumber", e.target.value, 'dm')}}
+                                                                    value={inspection.trial_number}
+                                                                    onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'trial_number'], e.target.value)}}
                                                                 />
                                                             </InputGroup>
                                                         </div>
@@ -805,8 +829,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                     <InputGroup style={{ width: '25%' }}>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.evaluations[0][0] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evaluations", e.target.value, 'dm', 0, 0)}}
+                                                                            value={inspection['two_leg_jump'].time ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'two_leg_jump', 'time'], e.target.value)}}
                                                                         />
                                                                         <InputGroup.Text>
                                                                             s
@@ -819,8 +843,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <Form.Control
                                                                             type="text"
                                                                             style={{ display: 'table-cell' }}
-                                                                            value={inspection.evalNotes[0] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evalNotes", e.target.value, 'dm', 0)}}
+                                                                            value={inspection['two_leg_jump'].note ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'two_leg_jump', 'note'], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -834,8 +858,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         </InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.evaluations[1][0] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evaluations", e.target.value, 'dm', 1, 0)}}
+                                                                            value={inspection['side_step'].rt ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'side_step', 'rt'], e.target.value)}}
                                                                         />
                                                                         <InputGroup.Text>
                                                                             s
@@ -848,8 +872,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <Form.Control
                                                                             type="number"
                                                                             style={{ display: 'table-cell' }}
-                                                                            value={inspection.evaluations[1][1] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evaluations", e.target.value, 'dm', 1, 1)}}
+                                                                            value={inspection['side_step'].lt ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'side_step', 'lt'], e.target.value)}}
                                                                         />
                                                                         <InputGroup.Text>
                                                                             s
@@ -864,8 +888,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <Form.Control
                                                                             type="text"
                                                                             style={{ display: 'table-cell' }}
-                                                                            value={inspection.evalNotes[1] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evalNotes", e.target.value, 'dm', 1)}}
+                                                                            value={inspection['side_step'].note ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'side_step', 'note'], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -879,8 +903,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         </InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.evaluations[2][0] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evaluations", e.target.value, 'dm', 2, 0)}}
+                                                                            value={inspection['side_one_step_in_out'].rt ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'side_one_step_in_out', 'rt'], e.target.value)}}
                                                                         />
                                                                         <InputGroup.Text>
                                                                             s
@@ -893,8 +917,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <Form.Control
                                                                             type="number"
                                                                             style={{ display: 'table-cell' }}
-                                                                            value={inspection.evaluations[2][1] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evaluations", e.target.value, 'dm', 2, 1)}}
+                                                                            value={inspection['side_one_step_in_out'].lt ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'side_one_step_in_out', 'lt'], e.target.value)}}
                                                                         />
                                                                         <InputGroup.Text>
                                                                             s
@@ -909,8 +933,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <Form.Control
                                                                             type="text"
                                                                             style={{ display: 'table-cell' }}
-                                                                            value={inspection.evalNotes[2] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evalNotes", e.target.value, 'dm', 2)}}
+                                                                            value={inspection['side_one_step_in_out'].note ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'side_one_step_in_out', 'note'], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -924,8 +948,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         </InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.evaluations[3][0] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evaluations", e.target.value, 'dm', 3, 0)}}
+                                                                            value={inspection['side_two_step_in_out'].rt ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'side_two_step_in_out', 'rt'], e.target.value)}}
                                                                         />
                                                                         <InputGroup.Text>
                                                                             s
@@ -938,8 +962,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <Form.Control
                                                                             type="number"
                                                                             style={{ display: 'table-cell' }}
-                                                                            value={inspection.evaluations[3][1] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evaluations", e.target.value, 'dm', 3, 1)}}
+                                                                            value={inspection['side_two_step_in_out'].lt ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'side_two_step_in_out', 'lt'], e.target.value)}}
                                                                         />
                                                                         <InputGroup.Text>
                                                                             s
@@ -954,8 +978,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <Form.Control
                                                                             type="text"
                                                                             style={{ display: 'table-cell' }}
-                                                                            value={inspection.evalNotes[3] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evalNotes", e.target.value, 'dm', 3)}}
+                                                                            value={inspection['side_two_step_in_out'].note ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'side_two_step_in_out', 'note'], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -969,8 +993,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         </InputGroup.Text>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.evaluations[4][0] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evaluations", e.target.value, 'dm', 4, 0)}}
+                                                                            value={inspection['forward_side_to_step'].rt ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'forward_side_to_step', 'rt'], e.target.value)}}
                                                                         />
                                                                         <InputGroup.Text>
                                                                             s
@@ -983,8 +1007,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <Form.Control
                                                                             type="number"
                                                                             style={{ display: 'table-cell' }}
-                                                                            value={inspection.evaluations[4][1] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evaluations", e.target.value, 'dm', 4, 1)}}
+                                                                            value={inspection['forward_side_to_step'].lt ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'forward_side_to_step', 'lt'], e.target.value)}}
                                                                         />
                                                                         <InputGroup.Text>
                                                                             s
@@ -999,8 +1023,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <Form.Control
                                                                             type="text"
                                                                             style={{ display: 'table-cell' }}
-                                                                            value={inspection.evalNotes[4] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evalNotes", e.target.value, 'dm', 4)}}
+                                                                            value={inspection['forward_side_to_step'].note ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'forward_side_to_step', 'note'], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -1011,8 +1035,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                     <InputGroup style={{ width: '25%' }}>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.evaluations[5][0] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evaluations", e.target.value, 'dm', 5, 0)}}
+                                                                            value={inspection['brasilian_step'].time ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'brasilian_step', 'time'], e.target.value)}}
                                                                         />
                                                                         <InputGroup.Text>
                                                                             s
@@ -1025,8 +1049,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <Form.Control
                                                                             type="text"
                                                                             style={{ display: 'table-cell' }}
-                                                                            value={inspection.evalNotes[5] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evalNotes", e.target.value, 'dm', 5)}}
+                                                                            value={inspection['brasilian_step'].note ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'brasilian_step', 'note'], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
@@ -1037,8 +1061,8 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                     <InputGroup style={{ width: '25%' }}>
                                                                         <Form.Control
                                                                             type="number"
-                                                                            value={inspection.evaluations[6][0] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evaluations", e.target.value, 'dm', 6, 0)}}
+                                                                            value={inspection['diagonal_line_run'].time ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'diagonal_line_run', 'time'], e.target.value)}}
                                                                         />
                                                                         <InputGroup.Text>
                                                                             s
@@ -1051,14 +1075,14 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                                                         <Form.Control
                                                                             type="text"
                                                                             style={{ display: 'table-cell' }}
-                                                                            value={inspection.evalNotes[6] ?? ""}
-                                                                            onChange={(e) => {updateInspection(index, "evalNotes", e.target.value, 'dm', 6)}}
+                                                                            value={inspection['diagonal_line_run'].note ?? ""}
+                                                                            onChange={(e) => {updateDeepValue(setDynamicMovement, [index, 'diagonal_line_run', 'note'], e.target.value)}}
                                                                         />
                                                                     </InputGroup>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <Button className={`${cx("delete")}`} onClick={() => deleteFunctionalLines(index, 'dm')}>
+                                                        <Button className={`${cx("delete")}`} onClick={() => deleteInspections(setDynamicMovement, index)}>
                                                             -
                                                         </Button>
                                                     </div>
@@ -1066,25 +1090,32 @@ const PhysicalPerformanceAddModal = ({show, handleClose, isNew=false, cv}: {show
                                             })}
                                         </div>
                                         <div style={{ padding: '10px 20px' }}>
-                                            <Button style={{ fontSize: '15px', width: '100%', margin: 'auto'}} variant={'secondary'} onClick={addNewDynamicMovement}> 추가 </Button>
+                                            <Button style={{ fontSize: '15px', width: '100%', margin: 'auto'}} variant={'secondary'} onClick={() => addInspections(setDynamicMovement, initialDynamicMovement)}> 추가 </Button>
                                         </div>
                                     </Tab>
                                 </Tabs>
-                            </div>                            
+                            </div>                           
                         </div>
-                        <div className={cx("inline")}>
-                            <div className={`${cx("cell")}`}>
-                                <InputGroup>
-                                    <InputGroup.Text>시행 날짜</InputGroup.Text>
-                                    <Form.Control
-                                        type='date'
-                                        value={date.toLocaleDateString('en-CA')}
-                                        onChange={(e) => {setDate(new Date(e.target.value))}}
-                                    >
-                                    </Form.Control>
-                                </InputGroup>
+                        <div className={cx("group-field")}> 
+                            <div className={cx("group-title")}>
+                                <span>비고</span>
                             </div>
-                        </div>
+                            <div className={cx("group-content")}>
+                                <div className={cx("inline")}>
+                                    <div className={`${cx("cell")}`}>
+                                        <InputGroup>
+                                            <InputGroup.Text>메모</InputGroup.Text>
+                                            <Form.Control
+                                                as="textarea"
+                                                rows={3}
+                                                value={note}
+                                                onChange={(e) => setNote(e.target.value)}
+                                            />
+                                        </InputGroup>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>  
                     </div>
                 </div>
             </Modal.Body>

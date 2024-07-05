@@ -10,16 +10,24 @@ import axios from 'axios';
 import { useLocalTokenValidation } from '../../../api/commons/auth';
 import { ExBodyAddModal, ImooveAddModal, InBodyAddModal, LookinBodyAddModal, XRayAddModal } from './InspectionHistory';
 import BloodInspectionAddModal from './InspectionHistory/BloodInspectionAddModal';
-import SurveyTypeSelectModal from './InspectionHistory/SurveyTypeSelectModal';
-import SurveyAddModalAdult from './InspectionHistory/SurveyAddModalAdult';
-import SurveyAddModalChild from './InspectionHistory/SurveyAddModalChild';
+import SurveyAddModal from './InspectionHistory/SurveyAddModal';
 import PodoscopeAddModal from './InspectionHistory/PodoscopeAddModal';
 import PhysicalPerformanceAddModal from './InspectionHistory/PhysicalPerformanceAddModal';
 import AlignmentAddModal from './InspectionHistory/AlignmentAddModal';
 import FlatWalkingVideoAddModal from './InspectionHistory/FlatWalkingVideoAddModal';
 import cv from "opencv-ts";
-import { Imoove } from './InspectionHistory/ImooveAddModal';
+import { Imoove, InBody, LookinBody, PhysicalPerformance } from './InspectionHistory/InspectionType.interface';
 import { XrayRecord } from './InspectionHistory/XRayAddModal';
+
+import dayjs from 'dayjs'
+import isLeapYear from 'dayjs/plugin/isLeapYear'
+import utc from "dayjs/plugin/utc"
+import 'dayjs/locale/ko'
+
+dayjs.extend(isLeapYear)
+dayjs.extend(utc)
+dayjs.locale('ko')
+
 
 interface Inspection {
 	id: number,
@@ -51,14 +59,17 @@ const HistoryModal = ({ show, handleClose, type }: { show: any, handleClose: ()=
 	}, [accessToken])
 
     const headers: TableHeader = [
-		{ 
-			Header: "회차",
-			accessor: "id",
-			width: 100
-		},
         { 
 			Header: "검사일자",
 			accessor: "inspected",
+            Cell: ({ row }) => {
+                let day = dayjs(row.original.inspected)
+				return (
+					<div>
+						{day.format('YYYY-MM-DD HH:mm')}
+					</div>
+			    )
+            },
 			width: 100
 		},
         { 
@@ -93,6 +104,7 @@ const HistoryModal = ({ show, handleClose, type }: { show: any, handleClose: ()=
 
     const handleEditorClose = () => {
         setEditorShow(false)
+        getAllInspections(type)
     }
 
     const handleEditorShow = (index: number) => {
@@ -139,7 +151,7 @@ const HistoryModal = ({ show, handleClose, type }: { show: any, handleClose: ()=
 		} catch (error) {
 			console.error("환자 조회 중 오류 발생:", error)
 		}
-	}, [config]) // 전체 환자 목록 가져오기
+	}, [config, url]) // 전체 환자 목록 가져오기
 
     const getSelectedInspection = () => {
         return inspectionData ? inspectionData[1] : null
@@ -183,7 +195,9 @@ const HistoryModal = ({ show, handleClose, type }: { show: any, handleClose: ()=
                 }
                 { type === "InBody" &&
                     <InBodyAddModal cv={cv}
-                        show={editorShow} 
+                        show={editorShow}
+                        isNew={false}
+                        selectedInBody={selectedInspection as InBody & {id: number}}
                         handleClose={handleEditorClose}
                     />
                 }
@@ -203,6 +217,8 @@ const HistoryModal = ({ show, handleClose, type }: { show: any, handleClose: ()=
                 { type === "Lookin' Body" &&
                     <LookinBodyAddModal cv={cv}
                         show={editorShow}
+                        isNew={false}
+                        selectedLookinBody={selectedInspection as LookinBody & {id: number}}
                         handleClose={handleEditorClose}
                     />
                 }
@@ -213,16 +229,11 @@ const HistoryModal = ({ show, handleClose, type }: { show: any, handleClose: ()=
                     />
                 }
                 { type === "설문지" && 
-                    <SurveyTypeSelectModal 
-                        show={editorShow} 
-                        handleShowAdult={() => {}} 
-                        handleShowChild={() => {}} 
-                        handleClose={handleEditorClose} 
-                    />
+                    <SurveyAddModal 
+                        show={false} 
+                        handleClose={handleEditorClose}
+                    /> 
                 }
-                { <SurveyAddModalAdult cv={cv} show={false} handleClose={handleEditorClose}/> }
-
-                { <SurveyAddModalChild cv={cv} show={false} handleClose={handleEditorClose}/> }
                 { type === "족저경" && 
                     <PodoscopeAddModal cv={cv}
                         show={editorShow}
@@ -230,8 +241,10 @@ const HistoryModal = ({ show, handleClose, type }: { show: any, handleClose: ()=
                     />
                 }
                 { type === "운동능력 검사" && 
-                    <PhysicalPerformanceAddModal cv={cv}
+                    <PhysicalPerformanceAddModal
                         show={editorShow}
+                        isNew={false}
+                        selectedPhysicalPerformance={selectedInspection as PhysicalPerformance & {id: number}}
                         handleClose={handleEditorClose}
                     />
                 }

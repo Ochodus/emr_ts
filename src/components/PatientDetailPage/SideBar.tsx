@@ -1,10 +1,14 @@
 import { useState } from 'react'
+
+
 const { Sidebar, Menu, SubMenu, MenuItem, menuClasses } = require('react-pro-sidebar');
+
 
 const SideBar = ({ setSubPage }: { setSubPage: (s: string) => any}) => {
     const [collapsed, setCollapsed] = useState(false);
 
     return (
+        <div>
         <Sidebar 
             collapsed={collapsed}
             backgroundColor="#212529"
@@ -73,6 +77,7 @@ const SideBar = ({ setSubPage }: { setSubPage: (s: string) => any}) => {
                 </SubMenu>
             </Menu>
         </Sidebar>
+        </div>
     )
 }
 

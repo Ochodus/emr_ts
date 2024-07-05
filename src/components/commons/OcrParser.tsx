@@ -3,26 +3,37 @@ import axios from 'axios';
 import FormData from 'form-data';
 import InputGroup from 'react-bootstrap/InputGroup'
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Button, ButtonGroup, Modal } from "react-bootstrap";
+import { Modal } from "react-bootstrap";
+import Button from '@mui/material/Button'
+// import Modal from '@mui/material';
 import Form from 'react-bootstrap/Form';
 import { FormCheckType } from 'react-bootstrap/FormCheck';
 import styles from './OcrParser.module.css'
 import classNames from 'classnames/bind';
+import { MuiFileInput } from 'mui-file-input'
+import CloseIcon from '@mui/icons-material/Close'
+import AttachFileIcon from '@mui/icons-material/AttachFile'
+import * as pdfjs from 'pdfjs-dist'
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString()
+
 
 interface OcrParserProps {
   children?: React.ReactNode,
   type: number,
   isMask: boolean,
   setOcrResult: (result: any) => void,
-  setFile: (file: File) => void,
+  file: File | null,
+  setFile: (file: File | null) => void,
   cv: any,
   smallSize: boolean,
   indicator: number
 }
 
-const PDFJS: any = require('pdfjs-dist');
-
-const OcrParser = ({ type=0, isMask=true, setOcrResult, setFile, cv, smallSize=false, indicator=0 }: OcrParserProps) => {
+const OcrParser = ({ type=0, isMask=true, setOcrResult, file, setFile, cv, smallSize=false, indicator=0 }: OcrParserProps) => {
     const [show, setShow] = useState(false) // 미리보기 확대 모달 display 컨트롤
     const [showEditor, setShowEditor] = useState(false) // 마스킹 설정 모달 display 컨트롤
   
@@ -90,15 +101,27 @@ const OcrParser = ({ type=0, isMask=true, setOcrResult, setFile, cv, smallSize=f
     const cx = classNames.bind(styles);
   
     return (
-        <div className={cx("contents")}>
-            <InputGroup style={{ width: "100%" }}>
-                <Form.Control
-                    type="file" 
-                    id={`ocr-target-${indicator}`}
-                    onChange={(e) => {renderSelected(cv, maskTemplate, isMasked, e, `${indicator}`, setFile); setDisabled(false);}}
-                />
-                <Button onClick={() => {requestWithFile(cv, isMasked, setOcrResult, `${indicator}`); setDisabled(true)}}>인식하기</Button>
-            </InputGroup>
+        <div className={cx("contents")} style={{ justifyContent: 'center'}}>
+            <div style={{display: 'flex', justifyContent: 'center' }}>
+              <MuiFileInput
+                  value={file}
+                  id={`ocr-target-${indicator}`}
+                  onChange={(e) => {renderSelected(cv, maskTemplate, isMasked, e, `${indicator}`, setFile); setDisabled(false);}}
+                  InputProps={{
+                    inputProps: { 
+                      accept: '.png, .jpeg, .jpg, .pdf'
+                    },
+                    startAdornment: <AttachFileIcon />
+                  }}
+                  clearIconButtonProps={{
+                    title: "Remove",
+                    children: <CloseIcon fontSize="small" />,
+                  }}
+                  label={'파일 선택'}
+                  style={{ padding: 'auto' }}
+              />
+              <Button variant="outlined" onClick={() => {requestWithFile(cv, isMasked, setOcrResult, `${indicator}`); setDisabled(true)}}>인식하기</Button>
+            </div>
             <div id={`previewRegion-${indicator}`}>
                 <div id={`ocr_images-${indicator}`} className={cx('photoFrame')} style={{ display: 'none' }}>
                     <canvas id={`ocr_original-${indicator}`} style={{ display: 'none' }}></canvas>
@@ -120,9 +143,7 @@ const OcrParser = ({ type=0, isMask=true, setOcrResult, setFile, cv, smallSize=f
                     onChange={(e) => toggleMask(e)}
                     style={{ display: "flex", alignItems: "center" }}
                     />
-                    <ButtonGroup aria-label="Second group" className="mask-setting">
-                        <Button className="btn btn-secondary" data-target="#img-preview" onClick={handleShowEditor} disabled={isDisabled}>마스킹 설정</Button>
-                    </ButtonGroup>
+                    <Button className="btn btn-secondary" data-target="#img-preview" onClick={handleShowEditor} disabled={isDisabled}>마스킹 설정</Button>
                 </InputGroup>
                 </div>
             </div>
@@ -187,25 +208,41 @@ const OcrParser = ({ type=0, isMask=true, setOcrResult, setFile, cv, smallSize=f
 }
   
   // Display selected image by input element
-const renderSelected = async (cv: any, maskTemplate: number, isMasked: boolean, e: any, indicator: string, setFile: (file: File) => void) => {
-    let file = e.target.files[0]
+const renderSelected = async (cv: any, maskTemplate: number, isMasked: boolean, file: File | null, indicator: string, setFile: (file: File | null) => void) => {
     setFile(file)
-    const ocr_original = document.getElementById(`ocr_original-${indicator}`) as any
-
+    
+    const ocr_original = document.getElementById(`ocr_original-${indicator}`) as HTMLCanvasElement
     if (!ocr_original) return
-  
+
     let reader = new FileReader()
+
+    if (!file) {
+      let context = ocr_original.getContext('2d', {willReadFrequently: true})
+      context!.clearRect(0, 0, ocr_original.width, ocr_original.height)
+
+      document.getElementById(`ocr_images-${indicator}`)?.setAttribute("style", "display: none;")
+      document.getElementById(`setting_bar-${indicator}`)?.setAttribute("style", "display: none;")
+      document.getElementById(`no_selected-${indicator}`)?.setAttribute("style", "display: none;")
+      // Copy from original to input canvas after finished rendering original 
+      masking(cv, maskTemplate, indicator)
+      copy_output(cv, isMasked, indicator)
+      copy_original(cv, isMasked, indicator)
+
+      return 
+    }
+
     try { reader.readAsDataURL(file) }
     catch { return }
+
     reader.onload = (e: ProgressEvent<FileReader>) => {
       // When file type is pdf
-      if (file['type'].split('/')[1] === 'pdf') {
+      if (file!['type'].split('/')[1] === 'pdf') {
         let data: string = ""
 
         if (typeof e?.target?.result === 'string')
           data = atob(e?.target?.result?.replace(/.*base64,/, ""))
   
-        PDFJS.getDocument({ data }).promise.then(function (pdf: any) {
+        pdfjs.getDocument(data).promise.then(function (pdf: any) {
           pdf.getPage(1).then(function (page: any) {
             const viewport = page.getViewport({ scale: 1444/page.getViewport({ scale: 1.0 }).height })
             ocr_original.height = viewport.height
@@ -230,15 +267,15 @@ const renderSelected = async (cv: any, maskTemplate: number, isMasked: boolean, 
       }
       // When file type is not pdf (assume image file)
       else {
-        let img = new Image() as any
+        let img = new Image()
         let context = ocr_original.getContext('2d', {willReadFrequently: true})
-        img.src = e.target?.result
+        img.src = `${e.target?.result}`
   
         img.onload = () => {
           ocr_original.width = img.width
           ocr_original.height = img.height
   
-          context.drawImage(img, 0, 0)
+          context!.drawImage(img, 0, 0)
   
           document.getElementById(`ocr_images-${indicator}`)?.setAttribute("style", "display: flex;")
           document.getElementById(`setting_bar-${indicator}`)?.setAttribute("style", "display: flex;")
@@ -254,6 +291,11 @@ const renderSelected = async (cv: any, maskTemplate: number, isMasked: boolean, 
   const copy_original = (cv: any, isMasked: boolean, indicator: string) => {
     let img = isMasked ? cv.imread(`ocr_original_masked-${indicator}`) : cv.imread(`ocr_original-${indicator}`)
     cv.imshow(`ocr_input-${indicator}`, img)
+  }
+
+  const copy_output = (cv: any, isMasked: boolean, indicator: string) => {
+    let img = isMasked ? cv.imread(`ocr_original_masked-${indicator}`) : cv.imread(`ocr_original-${indicator}`)
+    cv.imshow(`ocr_output-${indicator}`, img)
   }
   
   // Request clova api when click the convert button

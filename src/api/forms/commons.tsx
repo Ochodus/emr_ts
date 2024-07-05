@@ -103,7 +103,7 @@ export const createRNNInput = (
         fieldProps: [
             {
                 type: 'number',
-                value: birthToId(birth.toLocaleDateString('en-CA')) ?? "",
+                value: birthToId(birth.toLocaleString('en-CA')) ?? "",
                 tail: {
                     text: '-',
                     style: { backgroundColor: 'white' }
@@ -305,7 +305,7 @@ export const createDatePicker = (
             {
                 type: 'date',
                 placeholder: "",
-                value: values.toLocaleDateString('en-CA'),
+                value: values.toLocaleString('en-CA'),
                 onChange: onChanges,
                 name: name,
                 idPrefix: idPrefix

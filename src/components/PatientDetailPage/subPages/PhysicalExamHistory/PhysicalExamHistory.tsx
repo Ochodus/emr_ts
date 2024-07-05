@@ -9,6 +9,7 @@ import axios from "axios";
 import { useLocalTokenValidation } from "../../../../api/commons/auth";
 import styles from './PhysicalExamHistory.module.css';
 import classNames from 'classnames/bind';
+import { PhysicalExam } from "../../../../interfaces";
 
 export interface Changes {
 	name: string,
@@ -18,15 +19,6 @@ export interface Changes {
 	after_trial: number,
 	is_improved: boolean
 }
-
-export interface PhysicalExam {
-	recorded: string,
-	height: number,
-	weight: number,
-	systolic_blood_pressure: number,
-	diastolic_blood_pressure: number,
-	body_temperature: number
-} // Report 객체 타입
 
 const PhysicalExamHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axiosMode: boolean }) => {
 	const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
@@ -107,7 +99,7 @@ const PhysicalExamHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: bool
 		} catch (error) {
 			console.error("진료 조회 중 오류 발생:", error);
 		}
-	}, [config])
+	}, [config, url])
 	
 	const postPhysicalExam = async (newPhysicalExam: PhysicalExam, isNewPhysicalExam: boolean) => {
 		try {
@@ -145,12 +137,12 @@ const PhysicalExamHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: bool
 
 	useEffect(() => {
 		if (axiosMode) getPhysicalExam();
-	}, [getPhysicalExam]);
+	}, [getPhysicalExam, axiosMode]);
 
 	useEffect(() => {
 		let testMode = true
 		if ((process.env.NODE_ENV !== 'development' || testMode) && axiosMode) checkAuth()
-	  }, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
+	  }, [checkAuth, axiosMode]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
 
 	return (
 		<div>

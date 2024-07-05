@@ -26,7 +26,7 @@ const TestSelection = () => {
   }
 
   return (
-    <div>
+    <div style={{ backgroundColor: "white" }}>
         <div className={cx("cards-inline")}>
         {cardTypes.map((card, index) => (
             <div className={cx("record-table")} key={index}>

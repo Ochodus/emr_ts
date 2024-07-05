@@ -1,4 +1,0 @@
-div:has(> .multiselect-container) {
-    min-width: calc(100% - 55.45px);
-    max-width: calc(100% - 55.45px);
-}

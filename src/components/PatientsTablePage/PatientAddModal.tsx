@@ -167,28 +167,6 @@ const PatientAddModal = ({ show, isNew, selectedPatient, addPatient, addPhysical
             patientForm.setDoctor(selectedPatient.user_id)
             patientForm.setNote(selectedPatient.memo ?? "")
             setNokList(selectedPatient.noks.map( _ => { return {} } ))
-            // setNokList(selectedPatient.noks.map((nok) => {
-            //     return {
-            //         relationship: nok.relationship,
-            //         name: {
-            //             firstName: nok.first_name,
-            //             lastName: nok.last_name
-            //         },
-            //         gender: nok.gender,
-            //         birth: nok.birthday,
-            //         registrationNumber: nok.registrationNumber,
-            //         phoneNumber: {
-            //             firstNumber: nok.tel?.split('-')[0] ?? "",
-            //             middleNumber: nok.tel?.split('-')[1] ?? "",
-            //             lastNumber: nok.tel?.split('-')[2] ?? "",
-            //         },
-            //         address: {
-            //             mainAddress: nok.address,
-            //             subAddress: nok.address_detail,
-            //             postalCode: nok.post_number
-            //         }
-            //     }
-            // }))
         }
     }
 
@@ -198,8 +176,8 @@ const PatientAddModal = ({ show, isNew, selectedPatient, addPatient, addPhysical
         const newPatient: Patient = {
             first_name: patientForm.name.firstName,
             last_name: patientForm.name.lastName,
-            sex: +`${patientForm.gender}`.split('-')[2],
-            birthday: patientForm.birth.toLocaleDateString('en-CA'),
+            sex: +`${patientForm.gender}`,
+            birthday: patientForm.birth.toLocaleString('en-CA'),
             last_recorded: patientForm.regDate,
             tel: `${patientForm.phoneNumber.firstNumber}-${patientForm.phoneNumber.middleNumber}-${patientForm.phoneNumber.lastNumber}`,
             address: patientForm.address.mainAddress,
@@ -215,7 +193,7 @@ const PatientAddModal = ({ show, isNew, selectedPatient, addPatient, addPhysical
                         first_name: nok.name.firstName,
                         last_name: nok.name.lastName,
                         sex: nok.gender,
-                        birthday: nok.birth.toLocaleDateString('en-CA'),
+                        birthday: nok.birth.toLocaleString('en-CA'),
                         tel: `${nok.phoneNumber.firstNumber}-${nok.phoneNumber.middleNumber}-${nok.phoneNumber.lastNumber}`,
                         address: nok.address.mainAddress,
                         address_detail: nok.address.subAddress,
@@ -226,7 +204,7 @@ const PatientAddModal = ({ show, isNew, selectedPatient, addPatient, addPhysical
         }
 
         const newPhysicalExam: PhysicalExam = {
-            recorded: `${patientForm.regDate.toLocaleDateString('en-CA')}T${new Date().toLocaleTimeString('it-IT')}`,
+            recorded: `${patientForm.regDate.toLocaleString('en-CA')}T${new Date().toLocaleTimeString('it-IT')}`,
             height: physicalExamForm.height,
             weight: physicalExamForm.weight,
             systolic_blood_pressure: physicalExamForm.systolicBloodPressure,
@@ -247,6 +225,10 @@ const PatientAddModal = ({ show, isNew, selectedPatient, addPatient, addPhysical
             request("/api/users", 'get', undefined, setUserList)
         }
     }, [axiosMode, checkAuth, request])
+
+    useEffect(() => {
+        console.log(userList)
+    }, [userList])
 
     useEffect(() => {
 		let testMode = true

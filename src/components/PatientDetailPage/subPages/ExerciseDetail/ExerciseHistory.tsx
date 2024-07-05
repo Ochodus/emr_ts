@@ -13,10 +13,12 @@ import classNames from 'classnames/bind';
 export interface Trial {
 	therapist?: string,
 	exercise?: string,
-	time_ms?: string,
+	amount?: number,
+	amount_type?: string,
 	sets?: number,
-	count_per_set?: number,
-	area?: string
+	primary_class?: string,
+	secondary_class?: string,
+	tertiary_class?: string
 }
 
 export interface Exercise {
@@ -128,13 +130,12 @@ const ExerciseHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean,
 				url,
 				config
 			)
-		 
-			console.log(response.data);
+
 			setExerciseHistory(response.data);
 		} catch (error) {
 			console.error("진료 조회 중 오류 발생:", error);
 		}
-	}, [config])
+	}, [config, url])
 	
 	const postExerciseHistory = async (newExercise: Exercise, isNewExercise: boolean) => {
 		try {
@@ -172,12 +173,12 @@ const ExerciseHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean,
 
 	useEffect(() => {
 		if (axiosMode) getExerciseHistory();
-	}, [getExerciseHistory]);
+	}, [getExerciseHistory, axiosMode]);
 
 	useEffect(() => {
 		let testMode = true
 		if ((process.env.NODE_ENV !== 'development' || testMode) && axiosMode) checkAuth()
-	  }, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
+	  }, [checkAuth, axiosMode]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
 
 	return (
 		<div>

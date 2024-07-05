@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Header } from "../components/commons";
-import { PatientDetailHeader, SideBar, SummaryContainer } from "../components/PatientDetailPage";
+import { SideBarMui, SummaryContainer } from "../components/PatientDetailPage";
 import { MedicalRecord } from "../components/PatientDetailPage/subPages/MedicalRecord";
 import { ReportHistory } from "../components/PatientDetailPage/subPages/ReportHistory";
 import { ExerciseHistory } from "../components/PatientDetailPage/subPages/ExerciseDetail";
@@ -11,12 +10,17 @@ import { Patient, PhysicalExam } from "../interfaces";
 import { useParams } from 'react-router-dom';
 import { useLocalTokenValidation } from "../api/commons/auth";
 import axios from 'axios';
-import Card from "react-bootstrap/Card";
 import styles from "./PatientDetailPage.module.css";
 import classNames from 'classnames/bind';
 import { useDispatch } from "react-redux";
 import { changeSubPage } from "../reducers/subpages";
 import { PhysicalExamHistory } from "../components/PatientDetailPage/subPages/PhysicalExamHistory";
+import { PatientDetailHeaderMui } from "../components/PatientDetailPage";
+
+import { CssVarsProvider } from '@mui/joy/styles'
+import CssBaseline from '@mui/joy/CssBaseline'
+import { Box, Breadcrumbs, Link, Typography } from "@mui/joy";
+import { ChevronRightRounded, HomeRounded } from "@mui/icons-material";
 
 type ContainersType = {
 	[index: string]: JSX.Element
@@ -110,26 +114,64 @@ const PatientDetailPage = ({axiosMode}: {axiosMode: boolean}) => {
       }, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
   
     return (
-      <div>
-        <Header isLogin={isLogin}/>
-        <div className={cx("contents")}>
-          <SideBar setSubPage={handleSubPageChange}/>
-          <div className={cx("page-wrapper")}>
-            <Card>
-              <Card.Header className={cx("patient-header")}>
-                <PatientDetailHeader
-                  curPatient={curPatient}
-                  lastPhysicalExam={lastPhysicalExam}
-                  setSubPage={handleSubPageChange}
-                />
-              </Card.Header>
-              <Card.Body style={{ minHeight: "90vh", maxWidth: "100%" }}>
-                {containers[currentSubPage]}
-              </Card.Body>
-            </Card>
-          </div>
-        </div>
-      </div>
+      <CssVarsProvider>
+        <CssBaseline className={cx("contents")}>
+          <Box sx={{ display: 'flex', minHeight: '100dvh' }}>
+            <SideBarMui setSubPage={handleSubPageChange}/>
+            <PatientDetailHeaderMui 
+              curPatient={curPatient}
+              lastPhysicalExam={lastPhysicalExam}
+              setSubPage={handleSubPageChange}
+            />
+            <Box
+              component="main"
+              className="MainContent"
+              sx={{
+                px: { xs: 2, md: 6 },
+                pt: "calc(12px + var(--Header-height))",
+                pb: { xs: 2, sm: 2, md: 3 },
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                minWidth: 0,
+                height: "100dvh",
+                gap: 1
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                {/* <Breadcrumbs
+                  size="sm"
+                  aria-label="breadcrumbs"
+                  separator={<ChevronRightRounded fontSize="small" />}
+                  sx={{ pl: 0 }}
+                >
+                  <Link
+                    underline="none"
+                    color="neutral"
+                    href="#some-link"
+                    aria-label="Home"
+                  >
+                    <HomeRounded />
+                  </Link>
+                  <Link
+                    underline="hover"
+                    color="neutral"
+                    href="#some-link"
+                    fontSize={12}
+                    fontWeight={500}
+                  >
+                    Dashboard
+                  </Link>
+                  <Typography color="primary" fontWeight={500} fontSize={12}>
+                    Orders
+                  </Typography>
+                </Breadcrumbs> */}
+              </Box>
+              {containers[currentSubPage]}
+            </Box>  
+          </Box>
+        </CssBaseline>
+      </CssVarsProvider>
     );
   };
   

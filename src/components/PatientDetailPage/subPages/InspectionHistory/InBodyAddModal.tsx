@@ -1,8 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import { InBodyTable } from '../..'
-import { ResponsiveBullet, Datum } from '@nivo/bullet'
-import { scaleLinear } from 'd3-scale'
+import { ResponsiveBullet, Datum } from '@nivo/bullet' 
 import OcrParser from '../../../commons/OcrParser'
 import Modal from 'react-bootstrap/Modal'
 import InputGroup from 'react-bootstrap/InputGroup'
@@ -12,6 +11,8 @@ import styles from './InBodyAddModal.module.css'
 import classNames from 'classnames/bind';
 import { useParams } from 'react-router-dom'
 import { useDateTimeParser } from '../../../../api/commons/dateTimeParse'
+import { InBody } from './InspectionType.interface'
+import { uploadData, uploadFiles } from './utils'
 
 interface Inspection {
     value?: number,
@@ -31,13 +32,27 @@ interface InbodyResultStates {
     [index: string]: [Inspection, React.Dispatch<React.SetStateAction<Inspection>>]
 }
 
+interface InBodyAddModalProps {
+    show: any, 
+    isNew?: boolean, 
+    selectedInBody?: InBody & {id: number} | null, 
+    handleClose: ()=> void, 
+    cv: any
+}
+
 const getPercentageFromValue = (minValue: number, minRatio: number, value: number, valuePercentage?: number) => {
     if (valuePercentage) return 0
     else return Math.round(+value/(+minValue/(minRatio/100)) * 100000)/1000
 }
 
-const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handleClose: ()=> void, isNew?: boolean, cv: any}) => {
-    const cx = classNames.bind(styles);
+const InBodyAddModal = ({
+    show, 
+    isNew=true, 
+    selectedInBody=null, 
+    handleClose, 
+    cv
+}: InBodyAddModalProps) => {
+    const cx = classNames.bind(styles)
     const dateParser = useDateTimeParser()
 
     const [date, setDate] = useState<Date>(new Date());
@@ -95,50 +110,57 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
     const [bodyWaterComposition, setBodyWaterComposition] = useState<(Datum)[]>([])
     const [segmentalBodyWaterAnalysis, setSegmentalBodyWaterAnalysis] = useState<(Datum)[]>([])
 
-    const [file, setFile] = useState<File>()
-    const [fileWater, setFileWater] = useState<File>()
+    const [file, setFile] = useState<File | null>(null)
+    const [fileWater, setFileWater] = useState<File | null>(null)
 
     const [memo, setMemo] = useState("")
 
-    const inbodyResultStates: InbodyResultStates = {
-        bodyWater: [bodyWater, setBodyWater],
-        muscleMass: [muscleMass, setMuscleMass],
-        leanBodyMass: [leanBodyMass, setLeanBodyMass],
-        weight: [weight, setWeight],
-        protein: [protein, setProtein],
-        minerals: [minerals, setMinerals],
-        bodyFatMass: [bodyFatMass, setBodyFatMass],
-        skeletalMuscleMass: [skeletalMuscleMass, setSkeletalMuscleMass],
-        bmi: [bmi, setBmi],
-        percentBodyFat: [percentBodyFat, setPercentBodyFat],
-        rightArmSLA: [rightArmSLA, setRightArmSLA],
-        leftArmSLA: [leftArmSLA, setLeftArmSLA],
-        trunkSLA: [trunkSLA, setTrunkSLA],
-        rightLegSLA: [rightLegSLA, setRightLegSLA],
-        leftLegSLA: [leftLegSLA, setLeftLegSLA],
-        ecwRatio: [ecwRatio, setEcwRatio],
-        intracellularWater: [intracellularWater, setIntracellularWater],
-        extracellularWater: [extracellularWater, setExtracellularWater],
-        rightArmSBA: [rightArmSBA, setRightArmSBA],
-        leftArmSBA: [leftArmSBA, setLeftArmSBA],
-        trunkSBA: [trunkSBA, setTrunkSBA],
-        rightLegSBA: [rightLegSBA, setRightLegSBA],
-        leftLegSBA: [leftLegSBA, setLeftLegSBA],
-        rightArmECWR: [rightArmECWR, setRightArmECWR],
-        leftArmECWR: [leftArmECWR, setLeftArmECWR],
-        trunkECWR: [trunkECWR, setTrunkECWR],
-        rightLegECWR: [rightLegECWR, setRightLegECWR],
-        leftLegECWR: [leftLegECWR, setLeftLegECWR],
-        osseousMineral: [osseousMineral, setOsseousMineral],
-        basalMetabolicRate: [basalMetabolicRate, setBasalMetabolicRate],
-        visceralFatArea: [visceralFatArea, setVisceralFatArea],
-        waistHipRatio: [waistHipRatio, setWaistHipRatio],
-        bodyCellMass: [bodyCellMass, setBodyCellMass], 
-        upperArmCircumference: [upperArmCircumference, setUpperArmCircumference], 
-        upperArmMuscleCircumference: [upperArmMuscleCircumference, setUpperArmMuscleCircumference], 
-        tbwFfm: [tbwFfm, setTbwFfm], 
-        smi: [smi, setSMI]
-    }
+    const inbodyResultStates: InbodyResultStates = useMemo(() => { 
+        return {
+            bodyWater: [bodyWater, setBodyWater],
+            muscleMass: [muscleMass, setMuscleMass],
+            leanBodyMass: [leanBodyMass, setLeanBodyMass],
+            weight: [weight, setWeight],
+            protein: [protein, setProtein],
+            minerals: [minerals, setMinerals],
+            bodyFatMass: [bodyFatMass, setBodyFatMass],
+            skeletalMuscleMass: [skeletalMuscleMass, setSkeletalMuscleMass],
+            bmi: [bmi, setBmi],
+            percentBodyFat: [percentBodyFat, setPercentBodyFat],
+            rightArmSLA: [rightArmSLA, setRightArmSLA],
+            leftArmSLA: [leftArmSLA, setLeftArmSLA],
+            trunkSLA: [trunkSLA, setTrunkSLA],
+            rightLegSLA: [rightLegSLA, setRightLegSLA],
+            leftLegSLA: [leftLegSLA, setLeftLegSLA],
+            ecwRatio: [ecwRatio, setEcwRatio],
+            intracellularWater: [intracellularWater, setIntracellularWater],
+            extracellularWater: [extracellularWater, setExtracellularWater],
+            rightArmSBA: [rightArmSBA, setRightArmSBA],
+            leftArmSBA: [leftArmSBA, setLeftArmSBA],
+            trunkSBA: [trunkSBA, setTrunkSBA],
+            rightLegSBA: [rightLegSBA, setRightLegSBA],
+            leftLegSBA: [leftLegSBA, setLeftLegSBA],
+            rightArmECWR: [rightArmECWR, setRightArmECWR],
+            leftArmECWR: [leftArmECWR, setLeftArmECWR],
+            trunkECWR: [trunkECWR, setTrunkECWR],
+            rightLegECWR: [rightLegECWR, setRightLegECWR],
+            leftLegECWR: [leftLegECWR, setLeftLegECWR],
+            osseousMineral: [osseousMineral, setOsseousMineral],
+            basalMetabolicRate: [basalMetabolicRate, setBasalMetabolicRate],
+            visceralFatArea: [visceralFatArea, setVisceralFatArea],
+            waistHipRatio: [waistHipRatio, setWaistHipRatio],
+            bodyCellMass: [bodyCellMass, setBodyCellMass], 
+            upperArmCircumference: [upperArmCircumference, setUpperArmCircumference], 
+            upperArmMuscleCircumference: [upperArmMuscleCircumference, setUpperArmMuscleCircumference], 
+            tbwFfm: [tbwFfm, setTbwFfm], 
+            smi: [smi, setSMI]
+        }
+    }, [basalMetabolicRate, bmi, bodyCellMass, bodyFatMass, bodyWater,
+        ecwRatio, extracellularWater, intracellularWater, leanBodyMass, leftArmECWR, 
+        leftArmSBA, leftArmSLA, leftLegECWR, leftLegSBA, leftLegSLA, minerals, 
+        muscleMass, osseousMineral, percentBodyFat, protein, rightArmECWR, rightArmSBA, rightArmSLA, 
+        rightLegECWR, rightLegSBA, rightLegSLA, skeletalMuscleMass, smi, tbwFfm, trunkECWR, trunkSBA, 
+        trunkSLA, upperArmCircumference, upperArmMuscleCircumference, visceralFatArea, waistHipRatio, weight])
 
     const inbodyResultGraphGroupState = [
         {
@@ -289,6 +311,7 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                 else newData = {...newData, title: origin.title, id: origin.id, range: origin.range}
                 states[1](newData)
             }
+            return 1
         })
 
         setDate(new Date(result.date.split(' ')[0]))
@@ -440,92 +463,124 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
     ]
 
     const addInBodyRecord = async () => {
-        let file_url = ""
-        try {
-            let formData = new FormData()
-            formData.append('file', file ?? "")
-            let response = await axios.post('/api/file', formData, config)
-            file_url = response.data.file_path
-            console.log(`InBody 파일 추가 성공: ${file_url}`);
-        } catch (error) {
-            console.error("InBody 파일 추가 중 오류 발생:", error)
-            return
-        }
+        Promise.all([uploadFiles(selectedInBody, file, "InBody", config), uploadFiles(selectedInBody, fileWater, "InBody", config)]).then(([file_url, file_water_url]) => {
+            const newInBodyRecord: InBody = {
+                file_url: `${file_url} ${file_water_url}`,
+                inspected: dateParser(date ?? new Date()),
+                content: {
+                    user_id: +(patient_id ?? 0),
+                    height: 0,
+                    protein: +(protein.value ?? 0),
+                    minerals: +(minerals.value ?? 0),
+                    muscle_mass: +(muscleMass.value ?? 0),
+                    lean_body_mass: +(leanBodyMass.value ?? 0), // 제지방량
+                    hydration_detail: {
+                        body_water: +(bodyWater.value ?? 0),
+                        intracellular: +(intracellularWater.value ?? 0),
+                        extracellular: +(extracellularWater.value ?? 0)
+                    },
+                    skeletal_muscles_fat: {
+                        weight: +(weight.value ?? 0),
+                        skeletal_muscles_mass: +(skeletalMuscleMass.value ?? 0),
+                        body_fat_mass: +(bodyFatMass.value ?? 0)
+                    },
+                    obesity_detail: {
+                        BMI: +(bmi.value ?? 0),
+                        fat_percentage: +(percentBodyFat.value ?? 0)
+                    },
+                    muscles_by_region: {
+                        right_arm: +(rightArmSLA.value ?? 0),
+                        left_arm: +(leftArmSLA.value ?? 0),
+                        body: +(trunkSLA.value ?? 0),
+                        right_leg: +(rightLegSLA.value ?? 0),
+                        left_leg: +(leftLegSLA.value ?? 0)
+                    },
+                    hydration_by_region: {
+                        right_arm: +(rightArmSBA.value ?? 0),
+                        left_arm: +(leftArmSBA.value ?? 0),
+                        body: +(trunkSBA.value ?? 0),
+                        right_leg: +(rightLegSBA.value ?? 0),
+                        left_leg: +(leftLegSBA.value ?? 0)
+                    },
+                    extracellular_hydration_percentage: +(ecwRatio.value ?? 0),
+                    osseous_mineral: +(osseousMineral.value ?? 0),
+                    basal_metabolic_rate: +(basalMetabolicRate.value ?? 0),
+                    visceral_fat_area: +(visceralFatArea.value ?? 0),
+                    waist_hip_ratio: +(waistHipRatio.value ?? 0),
+                    body_cell_mass: +(bodyCellMass.value ?? 0),
+                    upper_arm_circumference: +(upperArmCircumference.value ?? 0), 
+                    upper_arm_muscle_circumference: +(upperArmMuscleCircumference.value ?? 0),
+                    tbw_ffm: +(tbwFfm.value ?? 0),
+                    smi: +(smi.value ?? 0)
+                },
+                detail: memo
+            }
 
-        let file_water_url = ""
-        try {
-            let formData = new FormData()
-            formData.append('file', fileWater ?? "")
-            let response = await axios.post('/api/file', formData, config)
-            file_water_url = response.data.file_path
-            console.log(`InBodyWater 파일 추가 성공: ${file_water_url}`);
-        } catch (error) {
-            console.error("InBodyWater 파일 추가 중 오류 발생:", error)
-            return
-        }
-
-        const newInBodyRecord = {
-            file_url: `${file_url} ${file_water_url}`,
-            inspected: dateParser(date ?? new Date()),
-            content: {
-                user_id: patient_id,
-                height: 0,
-                hydration: bodyWater.value,
-                protein: protein.value,
-                minerals: minerals.value,
-                fat: bodyFatMass.maxValue,
-                hydration_detail: {
-                    body: bodyWater.value,
-                    intracellular: intracellularWater.value,
-                    extracellular: extracellularWater.value
-                },
-                skeletal_muscels_fat: {
-                    weight: weight.value,
-                    skeletal_muscles: skeletalMuscleMass.value,
-                    fat: bodyFatMass.value
-                },
-                obesity_detail: {
-                    BMI: bmi.value,
-                    fat_percentage: percentBodyFat.value
-                },
-                muscles_by_region: {
-                    right_arm: rightArmSLA.value,
-                    left_arm: leftArmSLA.value,
-                    body: trunkSLA.value,
-                    right_leg: rightLegSLA.value,
-                    left_leg: leftLegSLA.value
-                },
-                hydration_by_region: {
-                    right_arm: rightArmSBA.value,
-                    left_arm: leftArmSBA.value,
-                    body: trunkSBA.value,
-                    right_leg: rightLegSBA.value,
-                    left_leg: leftLegSBA.value
-                },
-                extracellular_hydration_by_region: {
-                    right_arm: rightArmECWR.value,
-                    left_arm: leftArmECWR.value,
-                    body: trunkECWR.value,
-                    right_leg: rightLegECWR.value,
-                    left_leg: leftLegECWR.value
-                },
-                extracellular_hydration_percentage: ecwRatio.value,
-                body_changes: []
-            },
-            detail: memo
-        }
-        try {
-            await axios.post(url, newInBodyRecord, config)
-                console.log("InBody 검사 기록 추가 성공");
-        } catch (error) {
-                console.error("InBody 검사 기록 추가 중 오류 발생:", error);
-        }
+            uploadData(isNew, url, newInBodyRecord, "InBody", config, handleClose, selectedInBody?.id)
+        })
     }
 
     const renderSelected = () => {
+        if (selectedInBody) {
+            console.log(selectedInBody)
+            setBodyWater({id: 'bodyWater', title:'체수분', range: [70, 90, 110, 170], value: selectedInBody.content.hydration_detail.body_water})
+            setMuscleMass({id: 'muscleMass', title:'근육량'})
+            setLeanBodyMass({id: 'leanBodyMass', title:'제지방량'})
+            setWeight({id: 'weight', title:'체중', range: [55, 85, 115, 210], value: selectedInBody.content.skeletal_muscles_fat.weight})
+            setProtein({id: 'protein', title:'단백질', value: selectedInBody.content.protein})
+            setMinerals({id: 'minerals', title: '무기질', value: selectedInBody.content.minerals})
+            setBodyFatMass({id: 'bodyFatMass', title:'체지방', range: [40, 80, 160, 520], value: selectedInBody.content.skeletal_muscles_fat.weight})
+            setSkeletalMuscleMass({id: 'skeletalMuscleMass', title:'골격근량', range: [70, 90, 110, 170], value: selectedInBody.content.skeletal_muscles_fat.skeletal_muscles_mass})
+
+            setBmi({id: 'bmi', title:'BMI', range: [10.0, 18.5, 25.0, 55.0], value: selectedInBody.content.obesity_detail.BMI})
+            setPercentBodyFat({id: 'percentBodyFat', title:'체지방률', range: [0.1, 10.0, 20.0, 50.0], value: selectedInBody.content.obesity_detail.fat_percentage})
+
+            setRightArmSLA({id: 'rightArmSLA', title:'오른팔', range: [55, 85, 115, 175], value: selectedInBody.content.muscles_by_region.right_arm})
+            setLeftArmSLA({id: 'leftArmSLA', title:'왼팔', range: [55, 85, 115, 175], value: selectedInBody.content.muscles_by_region.left_arm})
+            setTrunkSLA({id: 'trunkSLA', title:'몸통', range: [70, 90, 110, 150], value: selectedInBody.content.muscles_by_region.body})
+            setRightLegSLA({id: 'rightLegSLA', title:'오른다리', range: [70, 90, 110, 150], value: selectedInBody.content.muscles_by_region.right_leg})
+            setLeftLegSLA({id: 'leftLegSLA', title:'왼다리', range: [70, 90, 110, 150], value: selectedInBody.content.muscles_by_region.left_leg})
+
+            setEcwRatio({id: 'ecwRatio', title:'세포외수분비', minValue: 0.360, maxValue: 0.390, range: [0.320, 0.360, 0.390, 0.450], value: selectedInBody.content.extracellular_hydration_percentage})
+
+            setIntracellularWater({id: 'intracellularWater', title:'세포내수분', range: [70, 90, 110, 170], value: selectedInBody.content.hydration_detail.intracellular})
+            setExtracellularWater({id: 'extracellularWater', title:'세포외수분', range: [70, 90, 110, 170], value: selectedInBody.content.hydration_detail.extracellular})
+
+            setRightArmSBA({id: 'rightArmSBA', title:'오른팔', range: [55, 85, 115, 205], value: selectedInBody.content.hydration_by_region.right_arm})
+            setLeftArmSBA({id: 'leftArmSBA', title:'왼팔', range: [55, 85, 115, 205], value: selectedInBody.content.hydration_by_region.left_arm})
+            setTrunkSBA({id: 'trunkSBA', title:'몸통', range: [70, 90, 110, 170], value: selectedInBody.content.hydration_by_region.body})
+            setRightLegSBA({id: 'rightLegSBA', title:'오른다리', range: [70, 90, 110, 170], value: selectedInBody.content.hydration_by_region.right_leg})
+            setLeftLegSBA({id: 'leftLegSBA', title:'왼다리', range: [70, 90, 110, 170], value: selectedInBody.content.hydration_by_region.left_leg})
+
+            // setRightArmECWR({id: 'rightArmECWR', title:'오른팔', range: [0.36, 0.39, 0.40, 0.43], value: selectedInBody.content.extracellular_hydration_by_region.right_arm})
+            // setLeftArmECWR({id: 'leftArmECWR', title:'왼팔', range:[0.36, 0.39, 0.40, 0.43], value: selectedInBody.content.extracellular_hydration_by_region.left_arm})
+            // setTrunkECWR({id: 'trunkECWR', title:'몸통', range: [0.36, 0.39, 0.40, 0.43], value: selectedInBody.content.extracellular_hydration_by_region.body})
+            // setRightLegECWR({id: 'rightLegECWR', title:'오른다리', range: [0.36, 0.39, 0.40, 0.43], value: selectedInBody.content.extracellular_hydration_by_region.right_leg})
+            // setLeftLegECWR({id: 'leftLegECWR', title:'왼다리', range: [0.36, 0.39, 0.40, 0.43], value: selectedInBody.content.extracellular_hydration_by_region.left_leg})
+
+            setOsseousMineral({id: 'osseousMineral', title:'골무기질량'})
+
+            setBasalMetabolicRate({id: 'basalMetabolicRate', title:'기초대사량'})
+            setVisceralFatArea({id: 'visceralFatArea', title:'내장지방단면적'})
+            setWaistHipRatio({id: 'waistHipRatio', title:'복부지방률'})
+            setBodyCellMass({id: 'bodyCellMass', title:'체세포량'})
+            setUpperArmCircumference({id: 'upperArmCircumference', title:'상완위팔둘레'})
+            setUpperArmMuscleCircumference({id: 'upperArmMuscleCircumference', title:'상완위팔근육둘레'})
+            setTbwFfm({id: 'tbwFfm', title:'TBW/FFM'})
+            setSMI({id: 'smi', title:'SMI'})
+
+            setMuscleFatAnalysis([])
+            setObesityAnalysis([])
+            setSegmentalLeanAnalysis([])
+            setEcwRatioAnalysis([])
+            setBodyWaterComposition([])
+            setSegmentalBodyWaterAnalysis([])
+
+            setMemo("")
+        }
     }
 
-    const getGraphDatum = (id: string) => {
+    const getGraphDatum = useCallback((id: string) => {
         let targetData = inbodyResultStates[id][0]
             let title = targetData.title
             let minValue = targetData.minValue
@@ -551,49 +606,49 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                     markers: [markers]
                 }
             )
-    }
+    }, [inbodyResultStates])
 
     useEffect(() => {
         let ids: string[] = ["weight", "skeletalMuscleMass", "bodyFatMass"]
         setMuscleFatAnalysis(ids.map((id) => {
             return getGraphDatum(id)
         }))
-    }, [weight, skeletalMuscleMass, bodyFatMass])
+    }, [weight, skeletalMuscleMass, bodyFatMass, getGraphDatum])
 
     useEffect(() => {
         let ids: string[] = ["bmi", "percentBodyFat"]
         setObesityAnalysis(ids.map((id) => {
             return getGraphDatum(id)
         }))
-    }, [bmi, percentBodyFat])
+    }, [bmi, percentBodyFat, getGraphDatum])
 
     useEffect(() => {
         let ids: string[] = ["rightArmSLA", "leftArmSLA", "trunkSLA", "rightLegSLA", "leftLegSLA"]
         setSegmentalLeanAnalysis(ids.map((id) => {
             return getGraphDatum(id)
         }))
-    }, [rightArmSLA, leftArmSLA, trunkSLA, rightLegSLA, leftLegSLA])
+    }, [rightArmSLA, leftArmSLA, trunkSLA, rightLegSLA, leftLegSLA, getGraphDatum])
 
     useEffect(() => {
         let ids: string[] = ["ecwRatio"]
         setEcwRatioAnalysis(ids.map((id) => {
             return getGraphDatum(id)
         }))
-    }, [ecwRatio])
+    }, [ecwRatio, getGraphDatum])
 
     useEffect(() => {
         let ids: string[] = ["bodyWater", "intracellularWater", "extracellularWater"]
         setBodyWaterComposition(ids.map((id) => {
             return getGraphDatum(id)
         }))
-    }, [bodyWater, intracellularWater, extracellularWater])
+    }, [bodyWater, intracellularWater, extracellularWater, getGraphDatum])
 
     useEffect(() => {
         let ids: string[] = ["rightArmSBA", "leftArmSBA", "trunkSBA", "rightLegSBA", "leftLegSBA"]
         setSegmentalBodyWaterAnalysis(ids.map((id) => {
             return getGraphDatum(id)
         }))
-    }, [rightArmSBA, leftArmSBA, trunkSBA, rightLegSBA, leftLegSBA])
+    }, [rightArmSBA, leftArmSBA, trunkSBA, rightLegSBA, leftLegSBA, getGraphDatum])
 
     return (
         <Modal show={show} onShow={renderSelected} onHide={handleClose} size='xl'>
@@ -619,6 +674,7 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                                             type={0} 
                                             isMask={true} 
                                             setOcrResult={onChangeOcrResult} 
+                                            file={file}
                                             setFile={setFile}
                                             cv={cv} 
                                             smallSize={true}
@@ -634,6 +690,7 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                                             type={1} 
                                             isMask={true} 
                                             setOcrResult={onChangeOcrResult} 
+                                            file={fileWater}
                                             setFile={setFileWater}
                                             cv={cv} 
                                             smallSize={true}
@@ -799,6 +856,7 @@ const InBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                                             </div>
                                         )
                                     }
+                                    else return null
                                 })}
                             </div>
                             <div className={cx("inline")} style={{ marginTop: '15px' }}>

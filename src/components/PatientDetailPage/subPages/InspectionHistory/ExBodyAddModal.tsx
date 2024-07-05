@@ -1,7 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
-import useDeepCompareEffect from 'use-deep-compare-effect'
-import { InBodyTable } from '../..'
-import { ResponsiveBullet, Datum } from '@nivo/bullet'
+import React, { useState, useMemo } from 'react'
 import OcrParser from '../../../commons/OcrParser'
 import Modal from 'react-bootstrap/Modal'
 import InputGroup from 'react-bootstrap/InputGroup'
@@ -10,53 +7,150 @@ import Button from 'react-bootstrap/Button'
 import styles from './InBodyAddModal.module.css'
 import classNames from 'classnames/bind';
 import ExBodyTable from './ExBodyTable'
-import axios from 'axios'
 import { useParams } from 'react-router-dom'
 import { useDateTimeParser } from '../../../../api/commons/dateTimeParse'
+import { Exbody, Analysis, SubAnalysis } from './InspectionType.interface'
+import { uploadData, uploadFiles } from './utils'
+import { produce } from 'immer'
 
-interface GaitFrontRear {
-    front: number,
-    rear: number
+interface ExbodyAddModalProps {
+    show: any, 
+    isNew?: boolean,
+    selectedExbody?: Exbody & {id: number} | null
+    handleClose: ()=> void, 
+    cv: any
 }
 
-interface GaitLeftRight {
-    left: number,
-    right: number
+type inspectionUpdater<T> = React.Dispatch<React.SetStateAction<T>>
+
+const initAnalysis: Analysis = {
+    fhp: {
+        image: "",
+        rear: "",
+        front: ""
+    },
+    trunk_lean: {
+        image: "",
+        rear: "",
+        front: ""
+    },
+    hip_extension_and_flexion: {
+        image: "",
+        left: {
+            front: "",
+            rear: ""
+        },
+        right: {
+            front: "",
+            rear: ""
+        }
+    },
+    hip_rotation: {
+        image: "",
+        right: {
+            inside: "",
+            outside: ""
+        },
+        left: {
+            inside: "",
+            outside: ""
+        }
+    },
+    knee_extension_and_flexion: {
+        image: "",
+        left: "",
+        right: ""
+    },
+    trunk_side_lean: {
+        image: "",
+        left: "",
+        right: ""
+    },
+    horizontal_movement_of_cog: {
+        image: "",
+        left: "",
+        right: ""
+    },
+    vertical_movement_of_cog: {
+        image: "",
+        up: "",
+        down: ""
+    },
+    pelvic_rotation: {
+        image: "",
+        left: "",
+        right: ""
+    },
+    step_width: {
+        image: "",
+        value: ""
+    },
+    stride: {
+        image: "",
+        value: ""
+    }
 }
 
-interface GaitComplex {
-    leftGait: GaitFrontRear
-    rightGait: GaitFrontRear
-}
+const parseOcrResult = (arr: (string | number)[]): SubAnalysis => {
+    let result: SubAnalysis = {};
+    let prevIndex: string | number = ""
+    let curTarget: SubAnalysis = result
 
-type Gait = GaitFrontRear | GaitLeftRight | GaitComplex | number | undefined
+    arr.forEach((value) => {
+        if (prevIndex !== "") {
+            if (typeof value === 'string') {
+                if (typeof prevIndex === 'string') {
+                    result[prevIndex] = {}
+                    curTarget = result[prevIndex] as SubAnalysis
+                }
+            }
+            else {
+                curTarget[prevIndex] = value
+            }
+        }
+        else if (typeof value === 'number') {
+            result['value'] = value
+        }
+        prevIndex = value
+    })
 
-interface ExbodyOcrResult {
-    [name: string]: Gait
-}
-
-interface ExbodyResultStates {
-    [index: string]: [Gait, React.Dispatch<React.SetStateAction<any>>]
-}
+    return result;
+};
 
 const parseStringToData = (value: string | undefined) => {
-    if (!value) return undefined
-    
-    let s = value.replace(/[^\d\n]/g, '')
-    console.log(s)
-    let numbers = value.replace(/[^\d\n]/g, '').split(/\n/).map(Number);
-    console.log(numbers)
-    
-    if (numbers.length === 1) return numbers[0]
-    if (numbers.length === 2) return { front: numbers[0], rear: numbers[1] }
-    if (numbers.length === 4) return { 
-        leftGait: { front: numbers[2], rear: numbers[3] },
-        rightGait: { front: numbers[0], rear: numbers[1] } 
+    if (!value) return {}
+
+    const convertTable = {
+        '앞': 'front',
+        '뒤': 'rear',
+        '우': 'right',
+        '좌': 'left',
+        '내': 'inside',
+        '외': 'outside',
+        '위': 'up',
+        '아래': 'down'
     }
-    return undefined
+
+    const altRegex = /(앞|뒤|우|좌|내|외|위|아래|\d+)/g;
+
+    let match
+    let converted: (string | number)[] = []
+    while ((match = altRegex.exec(value)) !== null) {
+        if (/^\d+$/.test(match[0])) converted.push(parseInt(match[0], 10))
+        else converted.push(convertTable[match[0] as (keyof typeof convertTable)])
+    }
+
+    return {...parseOcrResult(converted), image: ""} as SubAnalysis
 }
 
-const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handleClose: ()=> void, isNew?: boolean, cv: any}) => {
+
+const ExBodyAddModal = ({
+    show,
+    isNew=false, 
+    selectedExbody=null,
+    handleClose, 
+    cv
+}: ExbodyAddModalProps) => {
     const cx = classNames.bind(styles)
     const dateParser = useDateTimeParser()
 
@@ -74,63 +168,47 @@ const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
 	}, [accessToken])
 
     const [date, setDate] = useState<Date>(new Date())
-    const [fhp, setFhp] = useState<GaitFrontRear>()
-    const [trunkLean, setTrunkLean] = useState<GaitFrontRear>()
-    const [hipExtensionFlexion, setHipExtensionFlexion] = useState<GaitComplex>()
-    const [hipRotation, setHipRotation] = useState<GaitComplex>()
-    const [kneeExtensionFlexion, setKneeExtensionFlexion] = useState<GaitLeftRight>()
-    const [trunkSideLean, setTrunkSideLean] = useState<GaitLeftRight>()
-    const [horizontalMovementOfCOG, setHorizontalMovementOfCOG] = useState<GaitLeftRight>()
-    const [verticalMovementOfCOG, setVerticalMovementOfCOG] = useState<number>()
-    const [pelvicRotation, setPelvicRotation] = useState<GaitLeftRight>()
-    const [stepWidth, setStepWidth] = useState<number>()
-    const [stride, setStride] = useState<number>()
 
-    const [file, setFile] = useState<File>()
+    const [analysis, setAnalysis] = useState<Analysis>(initAnalysis)
+
+    const [file, setFile] = useState<File | null>(null)
     const [memo, setMemo] = useState("")
 
-    const exbodyResultStates: ExbodyResultStates = {
-        fhp: [fhp, setFhp],
-        trunkLean: [trunkLean, setTrunkLean],
-        hipExtensionFlexion: [hipExtensionFlexion, setHipExtensionFlexion],
-        hipRotation: [hipRotation, setHipRotation],
-        kneeExtensionFlexion: [kneeExtensionFlexion, setKneeExtensionFlexion],
-        trunkSideLean: [trunkSideLean, setTrunkSideLean],
-        horizontalMovementOfCOG: [horizontalMovementOfCOG, setHorizontalMovementOfCOG],
-        verticalMovementOfCOG: [verticalMovementOfCOG, setVerticalMovementOfCOG],
-        pelvicRotation: [pelvicRotation, setPelvicRotation],
-        stepWidth: [stepWidth, setStepWidth],
-        stride: [stride, setStride],
-    }
-
     const onChangeOcrResult = (result: any) => {
-        console.log(result)
-
-        const parsedData: ExbodyOcrResult = {
-            fhp: parseStringToData(result.fhp),
-            trunkLean: parseStringToData(result.trunkLean),
-            hipExtensionFlexion: parseStringToData(result.hipExtensionFlexion),
-            hipRotation: parseStringToData(result.hipRotation),
-            kneeExtensionFlexion: parseStringToData(result.kneeExtensionFlexion),
-            trunkSideLean: parseStringToData(result.trunkSideLean),
-            horizontalMovementOfCOG: parseStringToData(result.horizontalMovementOfCOG),
-            verticalMovementOfCOG: parseStringToData(result.verticalMovementOfCOG),
-            pelvicRotation: parseStringToData(result.pelvicRotation),
-            stepWidth: parseStringToData(result.stepWidth),
-            stride: parseStringToData(result.stride),
-        }
-
-        console.log(parsedData)
-
-        Object.values(exbodyResultStates).map((states, index) => {
-            let key = Object.keys(exbodyResultStates)[index]
-            let newData = parsedData[key]
-            if (newData) {
-                states[1](newData)
-            }
-        })
+        updateDeepValue(setAnalysis, ['fhp'], parseStringToData(result.fhp)) // 뒤4도\n앞6도
+        updateDeepValue(setAnalysis, ['trunk_lean'], parseStringToData(result.trunkLean)) // 우1도\n좌1도
+        updateDeepValue(setAnalysis, ['hip_extension_and_flexion'], parseStringToData(result.hipExtensionFlexion)) // 우:앞21도\n뒤14도\n좌:앞20도\n뒤13도
+        updateDeepValue(setAnalysis, ['hip_rotation'], parseStringToData(result.hipRotation)) //우;내3도\n외4도\n좌:내1도\n외5도
+        updateDeepValue(setAnalysis, ['knee_extension_and_flexion'], parseStringToData(result.kneeExtensionFlexion)) // 좌3도\n우6도
+        updateDeepValue(setAnalysis, ['trunk_side_lean'], parseStringToData(result.trunkSideLean)) // 우1도\n좌1도
+        updateDeepValue(setAnalysis, ['horizontal_movement_of_cog'], parseStringToData(result.horizontalMovementOfCOG)) // 우2cm\n좌5cm
+        updateDeepValue(setAnalysis, ['vertical_movement_of_cog'], parseStringToData(result.verticalMovementOfCOG)) // 위1cm
+        updateDeepValue(setAnalysis, ['pelvic_rotation'], parseStringToData(result.pelvicRotation)) //우7도\n좌6도
+        updateDeepValue(setAnalysis, ['step_width'], parseStringToData(result.stepWidth)) // 14cm
+        updateDeepValue(setAnalysis, ['stride'], parseStringToData(result.stride)) // 38cm
 
         setDate(new Date(result.date.split(' ')[0]))
+    }
+
+    const updateInspection = <T,>(
+        draft: T, 
+        targetPath: (string | number)[], 
+        newValue: string | SubAnalysis
+    ) => {
+        if (targetPath.length === 1) {
+            draft[targetPath[0] as (keyof T)] = newValue as T[keyof T]
+        } else {
+            let newDraft = draft[targetPath[0] as (keyof T)]
+            updateInspection<typeof newDraft>(newDraft, targetPath.slice(1), newValue)
+        }
+    }
+
+    const updateDeepValue = <T extends Analysis>(setInspection: inspectionUpdater<T>, targetPath: (string | number)[], newValue: string | SubAnalysis) => {
+        setInspection(prevObj =>
+            (produce(prevObj, draft => {
+                updateInspection(draft, targetPath, newValue)
+            }))
+        )
     }
 
     const headers = useMemo(
@@ -151,39 +229,6 @@ const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
         []
     )
 
-    const handleGaitValueChange = (value: number, path: string) => {
-        let paths = path.split('.')
-        let target = exbodyResultStates[paths[0]]
-
-        target[1]((prevGait: Gait) => {
-            // 이전 값 복사
-            if (!prevGait) return undefined
-            if (typeof prevGait === 'number') return value
-
-            let newGait = undefined
-            if ('front' in prevGait) {
-                if (paths[1] === 'front') newGait = { ...prevGait, front: value }
-                else newGait = { ...prevGait, rear: value }
-            }
-            else if ('left' in prevGait) {
-                if (paths[1] === 'left') newGait = { ...prevGait, left: value }
-                else newGait = { ...prevGait, right: value }
-            }
-            else {
-                if (paths[1] === 'leftGait') {
-                    if (paths[2] === 'front') newGait = { ...prevGait, leftGait: {...prevGait.leftGait, front: value} }
-                    else newGait = { ...prevGait, leftGait: {...prevGait.leftGait, rear: value} }
-                }
-                else {
-                    if (paths[2] === 'front') newGait = { ...prevGait, rightGait: {...prevGait.rightGait, front: value} }
-                    else newGait = { ...prevGait, rightGait: {...prevGait.rightGait, rear: value} }
-                }
-            }
-
-            return newGait;
-          });
-    }
-
     const RowTitle = ({title}: {title: string}) => {
         return (
             <div className={cx("row-title")}>
@@ -196,183 +241,80 @@ const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
         )
     }
 
-    const Entry = ({values, path}: {values: Gait, path: string}) => {
-        if (typeof values === 'number') {
+    const Entry = <T extends object | string | number>({value, path}: {value: T, path: string[]}) => {
+        if (typeof value !== 'object') {
             return (
-              <Form.Control
-                type="number"
-                value={values}
-                onChange={(e) => handleGaitValueChange(Number(e.target.value), path)}
-                style={{ width: '30%', margin: 'auto'}}
-              />
-            );
-          } else if (values !== undefined) {
+                <Form.Control
+                    type="number"
+                    value={+value}
+                    onChange={(e) => updateDeepValue(setAnalysis, path, `${e.target.value}`)}
+                    style={{ width: '30%', margin: 'auto'}}
+                />
+            )
+        } else {
             return (
-              <div>
-                {Object.keys(values).map((key) => (
-                  <div style={{ display: 'flex'}} key={key}>
-                    <div style={{ width: '40%', margin: 'auto', padding: '10px', fontWeight: '550', borderRight: '1px solid gray'  }} >{key}</div>
-                    <Entry values={(values as any)[key]} path={`${path}.${key}`}/>
-                  </div>
-                ))}
-              </div>
+                <div>
+                    {Object.keys(value as {}).map((key) => {
+                        if (key === 'image') return null
+                        return (
+                            <div style={{ display: 'flex'}} key={key}>
+                                <div style={{ width: '40%', margin: 'auto', padding: '10px', fontWeight: '550', borderRight: '1px solid gray' }} >{key}</div>
+                                <Entry value={value[key as (keyof T)] as T} path={path.concat(key)}/>
+                            </div>
+                        )
+                    })}
+                </div>
             );
-          } else {
-            return null;
-          }
+        }
     }
 
-    const items = [
-        {
-            type: <RowTitle title="FHP"></RowTitle>,
+    const items = Object.keys(analysis).map((key) => {
+        let titles = {
+            fhp: "FHP",
+            trunk_lean: "Trunk Lean",
+            hip_extension_and_flexion: "Hip Extension · Flexion",
+            hip_rotation: "Hip Rotation",
+            knee_extension_and_flexion: "Knee Extension · Flexion",
+            trunk_side_lean: "Trunk Side Lean",
+            horizontal_movement_of_cog: "Horizontal Movement of COG",
+            vertical_movement_of_cog: "Vertical Movement of COG",
+            pelvic_rotation: "Pelvic Rotation",
+            step_width: "Step Width",
+            stride: "Stride"
+        }
+
+        return {
+            type: <RowTitle title={titles[key as (keyof typeof titles)]}></RowTitle>,
             graph: <div></div>,
-            values: <Entry values={fhp} path={'fhp'}></Entry>,
-        },
-        {
-            type: <RowTitle title="Trunk Lean"></RowTitle>,
-            graph: <div></div>,
-            values: <Entry values={trunkLean} path={'trunkLean'}></Entry>,
-        },
-        {
-            type: <RowTitle title="Hip Extension / Flexion"></RowTitle>,
-            graph: <div></div>,
-            values: <Entry values={hipExtensionFlexion} path={'hipExtensionFlexion'}></Entry>,
-        },
-        {
-            type: <RowTitle title="Hip Rotation"></RowTitle>,
-            graph: <div></div>,
-            values: <Entry values={hipRotation} path={'hipRotation'}></Entry>,
-        },
-        {
-            type: <RowTitle title="Knee Extension / Flexion"></RowTitle>,
-            graph: <div></div>,
-            values: <Entry values={kneeExtensionFlexion} path={'kneeExtensionFlexion'}></Entry>,
-        },
-        {
-            type: <RowTitle title="Trunk Side Lean"></RowTitle>,
-            graph: <div></div>,
-            values: <Entry values={trunkSideLean} path={'trunkSideLean'}></Entry>,
-        },
-        {
-            type: <RowTitle title="Horizontal Movement of COG"></RowTitle>,
-            graph: <div></div>,
-            values: <Entry values={horizontalMovementOfCOG} path={'horizontalMovementOfCOG'}></Entry>,
-        },
-        {
-            type: <RowTitle title="Vertical Movement of COG"></RowTitle>,
-            graph: <div></div>,
-            values: <Entry values={verticalMovementOfCOG} path={'verticalMovementOfCOG'}></Entry>,
-        },
-        {
-            type: <RowTitle title="Pelvic Rotation"></RowTitle>,
-            graph: <div></div>,
-            values: <Entry values={pelvicRotation} path={'pelvicRotation'}></Entry>,
-        },
-        {
-            type: <RowTitle title="Step Width"></RowTitle>,
-            graph: <div></div>,
-            values: <Entry values={stepWidth} path={'stepWidth'}></Entry>,
-        },
-        {
-            type: <RowTitle title="Stride"></RowTitle>,
-            graph: <div></div>,
-            values: <Entry values={stride} path={'stride'}></Entry>,
-        },
-    ]
+            values: <Entry value={analysis[key as (keyof Analysis)]} path={[key]}></Entry>,
+        }
+    })
 
     const addExBodyRecord = async () => {
-        let file_url = ""
-        try {
-            let formData = new FormData()
-            formData.append('file', file ?? "")
-            let response = await axios.post('/api/file', formData, config)
-            file_url = response.data.file_path
-            console.log(`InBody 파일 추가 성공: ${file_url}`);
-        } catch (error) {
-            console.error("InBody 파일 추가 중 오류 발생:", error)
-            return
-        }
+        uploadFiles(selectedExbody, file, 'Exbody', config).then((file_url) => {
 
-        const newInBodyRecord = {
-            file_url: file_url,
-            inspected: dateParser(date ?? new Date()),
-            content: {
-                name: "",
-                phone: "",
-                age: "",
-                gender: 0,
-                height: 0,
-                weight: 0,
-                effectived: dateParser(date ?? new Date()),
-                chart_no: 0,
-                department: 0,
-                inpatient_area: 0,
-                bed_no: 0,
-                fhp: {
-                    image: "",
-                    rear: fhp?.rear ?? 0,
-                    front: fhp?.front ?? 0
+            console.log(analysis)
+            const newExbodyRecord: Exbody = {
+                file_url: file_url,
+                inspected: dateParser(date ?? new Date()),
+                content: {
+                    name: "",
+                    phone: "",
+                    age: "",
+                    gender: 0,
+                    height: 0,
+                    weight: 0,
+                    effectived: dateParser(date ?? new Date()),
+                    chart_no: 0,
+                    department: 0,
+                    inpatient_area: 0,
+                    bed_no: 0,
+                    analysis: analysis
                 },
-                trunk_lean: {
-                    image: "",
-                    rear: trunkLean?.rear ?? 0,
-                    front: trunkLean?.front ?? 0
-                },
-                hip_extension_and_flexion: {
-                    image: "",
-                    left_front: hipExtensionFlexion?.leftGait.front ?? 0,
-                    left_rear: hipExtensionFlexion?.leftGait.rear ?? 0,
-                    right_front: hipExtensionFlexion?.rightGait.front ?? 0,
-                    right_rear: hipExtensionFlexion?.rightGait.rear ?? 0,
-                },
-                hip_rotation: {
-                    image: "",
-                    right_inside: hipRotation?.leftGait.front ?? 0,
-                    right_outside: hipRotation?.leftGait.rear ?? 0,
-                    left_inside: hipRotation?.rightGait.front ?? 0,
-                    left_outside: hipRotation?.rightGait.rear ?? 0,
-                },
-                knee_extension_and_flexion: {
-                    image: "",
-                    left: kneeExtensionFlexion?.left ?? 0,
-                    right: kneeExtensionFlexion?.right ?? 0
-                },
-                trunk_side_lean: {
-                    image: "",
-                    left: trunkSideLean?.left ?? 0,
-                    right: trunkSideLean?.right ?? 0
-                },
-                horizontal_movement_of_cog: {
-                    image: "",
-                    left: horizontalMovementOfCOG?.left ?? 0,
-                    right: horizontalMovementOfCOG?.right ?? 0
-                },
-                vertical_movement_of_cog: {
-                    image: "",
-                    up: verticalMovementOfCOG ?? 0
-                },
-                pelvic_rotation: {
-                    image: "",
-                    left: pelvicRotation?.left ?? 0,
-                    right: pelvicRotation?.right ?? 0
-                },
-                step_width: {
-                    image: "",
-                    value: stepWidth
-                },
-                stride: {
-                    image: "",
-                    value: stride
-                }
-            },
-            detail: memo
-        }
-        try {
-            await axios.post(url, newInBodyRecord, config)
-                console.log("InBody 검사 기록 추가 성공");
-        } catch (error) {
-                console.error("InBody 검사 기록 추가 중 오류 발생:", error);
-        }
+                detail: memo
+            }
+            uploadData(isNew, url, newExbodyRecord, 'Exbody', config, handleClose, selectedExbody?.id)
+        })
     }
 
     const renderSelected = () => {
@@ -401,6 +343,7 @@ const ExBodyAddModal = ({show, handleClose, isNew=false, cv}: {show: any, handle
                                             type={2} 
                                             isMask={true} 
                                             setOcrResult={onChangeOcrResult} 
+                                            file={file}
                                             setFile={setFile}
                                             cv={cv} 
                                             smallSize={false}
