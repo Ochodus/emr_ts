@@ -1,3 +1,3 @@
-import Enchiridion from "./Enchiridion";
+import EnchiridionType from "./Enchiridion";
 
-export { Enchiridion }
+export { EnchiridionType as Enchiridion }

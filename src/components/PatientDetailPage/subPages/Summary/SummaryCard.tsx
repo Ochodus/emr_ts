@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import Card from 'react-bootstrap/Card'
 import { MedicalRecord } from '../MedicalRecord'
 import { Datum, LineSvgProps, ResponsiveLine, Serie } from '@nivo/line';
 import { LegendProps } from '@nivo/legends'
@@ -8,9 +7,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'react-date-range-ts/dist/styles.css';
 import 'react-date-range-ts/dist/theme/default.css';
 import { useParams } from "react-router-dom";
-import { Imoove, InBody } from "../InspectionHistory/InspectionType.interface";
 import { PhysicalExam } from "../../../../interfaces";
 import { SummaryCardType } from "./SummaryContainer";
+import { Box, Divider, IconButton, Sheet, Typography } from "@mui/joy";
+import { Close } from "@mui/icons-material";
+import { DefaultInspection, ImooveContent, InBodyContent, LookinBodyContent } from "../../../../interfaces/inspectionType.interface";
 
 
 const defaultGraphProps: LineSvgProps = {
@@ -84,7 +85,7 @@ const defaultLegendProps: LegendProps[] = [{
   ]
 }]
 
-const SummaryCard = ({cardType, axiosMode}: {cardType: SummaryCardType, axiosMode: boolean}) => {
+const SummaryCard = ({cardType, axiosMode, rowIndex, colIndex, cardClose, divider}: {cardType: SummaryCardType, axiosMode: boolean, rowIndex: number, colIndex: number, cardClose: (row: number, col: number) => void, divider: number}) => {
     const { patient_id } = useParams()
 
     const accessToken = JSON.parse(JSON.parse(window.localStorage.getItem("persist:auth") ?? "")?.token ?? "")
@@ -145,7 +146,6 @@ const SummaryCard = ({cardType, axiosMode}: {cardType: SummaryCardType, axiosMod
           let data = Object.keys(inspections).map(key => {
             return { "id": key, "data": inspections[key] }
           })
-          console.log(data)
           setGraphData(data)
         }
         else {
@@ -161,7 +161,6 @@ const SummaryCard = ({cardType, axiosMode}: {cardType: SummaryCardType, axiosMod
             return 0
           })
           
-          console.log(data)
           setGraphData([{ "id": id, "data": data }])
         }
 
@@ -174,16 +173,66 @@ const SummaryCard = ({cardType, axiosMode}: {cardType: SummaryCardType, axiosMod
 
     useEffect(() => {
       if (cardType.type === "Physical Exam") getData<PhysicalExam>(`/api/patients/${patient_id}/medical/physical_exam`, cardType.name, cardType.path, ['recorded'])
-      if (cardType.type === "IMOOVE") getData<Imoove>(`/api/patients/${patient_id}/medical/inspections?inspection_type=IMOOVE`, cardType.name, cardType.path, ['inspected'])
-      if (cardType.type === "InBody") getData<InBody>(`/api/patients/${patient_id}/medical/inspections?inspection_type=INBODY`, cardType.name, cardType.path, ['inspected'])
-      if (cardType.type === "Lookin' Body") getData<InBody>(`/api/patients/${patient_id}/medical/inspections?inspection_type=LOOKINBODY`, cardType.name, cardType.path, ['inspected'], {legends: defaultLegendProps})
+      if (cardType.type === "IMOOVE") getData<DefaultInspection<ImooveContent>>(`/api/patients/${patient_id}/medical/inspections?inspection_type=IMOOVE`, cardType.name, cardType.path, ['inspected'])
+      if (cardType.type === "InBody") getData<DefaultInspection<InBodyContent>>(`/api/patients/${patient_id}/medical/inspections?inspection_type=INBODY`, cardType.name, cardType.path, ['inspected'])
+      if (cardType.type === "Lookin' Body") getData<DefaultInspection<LookinBodyContent>>(`/api/patients/${patient_id}/medical/inspections?inspection_type=LOOKINBODY`, cardType.name, cardType.path, ['inspected'], {legends: defaultLegendProps})
     }, [getData, patient_id, cardType])
 
+    useEffect(() => {console.log(graphData)}, [graphData])
+
     return (
-        <Card.Body style={{ minHeight: "200px", height: "300px" }}>
-            {cardType.type === "진료 기록" && <MedicalRecord isSummaryMode axiosMode={axiosMode}></MedicalRecord>}
-            {cardType.type !== "진료 기록" && <ResponsiveLine {...graphProps} data={graphData} axisLeft={{...graphProps.axisLeft, legend: yLabel}}></ResponsiveLine>}
-        </Card.Body>
+      <Sheet
+        variant="outlined"
+        sx={{
+          borderRadius: 'sm',
+          p: 1,
+          flex: '1 1 auto'
+        }}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 2,
+          justifyContent: 'space-between',
+          p: '0px 5px'
+        }}>
+          <Typography 
+            fontWeight="600" 
+            fontSize="20px"
+            sx={{
+                color: '#32383e'
+            }}
+            margin="auto 0"
+          >
+            {cardType.name}
+          </Typography>
+          <IconButton>
+            <Close 
+              onClick={() => {cardClose(rowIndex, colIndex)}} 
+              style={{ margin: 'auto 0' }}
+            />
+          </IconButton>
+        </Box>
+        <Divider component="div" sx={{ my: 1 }} />
+        <Box sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            p: '0px 5px'
+          }}
+        >
+          <Sheet sx={{
+            minHeight: '300px',
+            width: '300px',
+            overflow: "auto",
+            flex: '1 1 auto',
+            '&::-webkit-scrollbar': {
+              display: 'none'
+            }
+          }}>
+            {cardType.type === "진료 기록" && <MedicalRecord isSummaryMode axiosMode={axiosMode} />}
+            {cardType.type !== "진료 기록" && <ResponsiveLine {...graphProps} data={graphData} axisLeft={{...graphProps.axisLeft, legend: yLabel}} />}
+          </Sheet>
+        </Box>
+      </Sheet>
     );
 };
 

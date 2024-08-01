@@ -1,37 +1,55 @@
-import { useCallback } from "react";
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
+import { DefaultInspection, inspectionContent } from "interfaces/inspectionType.interface";
 
 export const auth = window.localStorage.getItem("persist:auth")
 export const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
+export const BASE_BACKEND_URL = ""
 
-export const useRequestAPI = () => {
-    const auth = window.localStorage.getItem("persist:auth")
-	const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
+type Uploadables = DefaultInspection<inspectionContent> | null
 
-	let config = {
-		headers: {
-			Authorization: "Bearer " + accessToken,
-		},
-	}
+export const uploadFiles = async (
+    data: Uploadables,
+    files: (File | null)[],
+    name: string,
+    config: AxiosRequestConfig<FormData> | undefined,
+    filesChanged: boolean[]
+) => {
+    let file_urls = Array.from({length: files.length}, () => "")
 
-    const request = useCallback(async (url: string, type: 'get' | 'post' | 'patch' | 'delete' = 'get', data? : any, responseHandler?: Function, errorHandler?: Function) => {
-        let axiosRequest = 
-            type === 'post' ? axios.post :
-            type === 'patch' ? axios.patch :
-            type === 'delete' ? axios.delete : 
-            axios.get
-
-        try {
-            let response = undefined
-            if (type === 'post' || type === 'patch') response = await axiosRequest(url, data, config)
-            if (type === 'get' || type === 'delete') response = await axiosRequest(url, config)
-
-            if (responseHandler) responseHandler(response?.data)
-
-        } catch (error) {
-            if (errorHandler) errorHandler()
+    await Promise.all(files.map(async (file, index) => {
+        if (data === null || filesChanged[index]) {
+            try {
+                let formData = new FormData()
+                formData.append('file', file ?? "")
+                let response = await axios.post(`${BASE_BACKEND_URL}/api/file`, formData, config)
+                file_urls[index] = response.data.file_path
+            } catch (error) {
+                console.error(`${name} 파일 추가 중 오류 발생: `, error)
+                file_urls[index] = ""
+            }
+        } else {
+            file_urls[index] = data.file_urls[index]
         }
-    }, [])
-
-    return request
+    }))
+    
+    return file_urls
 }
+
+export const uploadData = async (
+    isNew: boolean, 
+    url: string,
+    data: Uploadables, 
+    name: string, 
+    config: AxiosRequestConfig<Uploadables> | undefined, 
+    handleClose: () => void,
+    id?: number
+) => {
+    try {
+        isNew ? await axios.post(url, data, config) : await axios.patch(`${url}/${id}`, data, config)
+        console.log(`${name} 검사 기록 ${isNew ? "추가" : "편집"} 성공 : \n\n${JSON.stringify(data)}`) 
+        handleClose()              
+    } catch (error) {
+        console.error(`${name} 검사 기록 ${isNew ? "추가" : "편집"} 중 오류 발생: `, error)
+    }
+}
+

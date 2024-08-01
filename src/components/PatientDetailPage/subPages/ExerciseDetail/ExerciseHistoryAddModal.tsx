@@ -1,21 +1,22 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import Modal from 'react-bootstrap/Modal'
-import InputGroup from 'react-bootstrap/InputGroup'
-import Form from 'react-bootstrap/Form'
-import Button from 'react-bootstrap/Button'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import axios from 'axios'
-import { useLocalTokenValidation } from '../../../../api/commons/auth'
-import styles from './ExerciseHistoryAddModal.module.css'
-import classNames from 'classnames/bind'
+import { useLocalTokenValidation } from 'api/commons/auth'
 import { Exercise, Trial } from './ExerciseHistory'
-import { useDateTimeParser } from '../../../../api/commons/dateTimeParse'
+import { ID } from 'components/commons/TableMui'
+import { Box, Divider, FormControl, FormLabel, IconButton, Sheet, Stack, Textarea, Typography, Button, Input, FormHelperText, Select, Option } from '@mui/joy'
+import { Add, Close, Delete, InfoOutlined } from '@mui/icons-material'
+import { FormAccordion, FormAccordionDetails, FormAccordionHeader, FormAccordionSummary } from '../InspectionHistory/CustomTheme'
+import { DateTimePicker, LocalizationProvider, renderTimeViewClock } from '@mui/x-date-pickers'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import dayjs from 'dayjs'
+import { validationCheck } from 'api/commons/utils'
 
 interface ExerciseHistoryAddModalProps {
     show: boolean, 
     isNew: boolean
-    selectedExercise: Exercise | null,
-    addFunction: (newExercise: Exercise, isNew: boolean) => void
-    handleClose: () => void, 
+    selectedExercise: Exercise & ID | null,
+    addExercise: (newExercise: Exercise, isNew: boolean) => void
+    handleClose: React.Dispatch<React.SetStateAction<boolean>>, 
 }
 
 const exerciseClassifier: {
@@ -52,10 +53,19 @@ interface User {
     department: string
 }
 
-const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise, addFunction, handleClose }: ExerciseHistoryAddModalProps) => {
+const initialTrial: Trial = {
+	therapist: "",
+	exercise: "",
+	amount: "",
+	amount_type: "",
+	sets: "",
+	primary_class: "",
+	secondary_class: "",
+	tertiary_class: ""
+}
+
+const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise, addExercise, handleClose }: ExerciseHistoryAddModalProps) => {
     const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
-    const dateParser = useDateTimeParser()
-    const cx = classNames.bind(styles);
 
     const auth = window.localStorage.getItem("persist:auth")
 	const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
@@ -68,23 +78,18 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise, addFunction, h
 		}
 	}, [accessToken])
 
-    const [progressedDate, setProgressedDate] = useState<string>(new Date().toLocaleDateString('en-CA'))
+    const [progressedDate, setProgressedDate] = useState<dayjs.Dayjs>(dayjs())
     const [totalTime, setTotalTime] = useState<string>("")
-    
+    const [submitted, setSubmitted] = useState<boolean>(false)
     const [trialExercises, setTrialExercises] = useState<Trial[]>([])
     const [userList, setUserList] = useState<User[]>([])
     const [memo, setMemo] = useState<string>("")
 
-    const renderSelected = () => {
-        if (!isNew && selectedExercise) {
-            setProgressedDate(selectedExercise.progressed)
-            setTotalTime(selectedExercise.total_time_ms)
-            setTrialExercises(selectedExercise.trial_exercises)
-            setMemo(selectedExercise.memo)
-        }
-    }
-
     const handleAddExerciseHistory = () => {
+
+        setSubmitted(true)
+
+
         console.log(
             isNew ? "add" : ("edit - " + selectedExercise?.progressed),
             "\nprogressedDate: " + progressedDate,
@@ -93,14 +98,14 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise, addFunction, h
         )
 
         const newExercise: Exercise = {
-            progressed: dateParser(new Date(progressedDate)),
+            progressed: progressedDate.format(),
             total_time_ms: totalTime,
             trial_exercises: trialExercises,
             memo: memo,
         }
 
-        addFunction(newExercise, isNew)
-        handleClose()
+        addExercise(newExercise, isNew)
+        handleClose(false)
     }
 
     const getAllUsers = useCallback(async () => {
@@ -123,260 +128,386 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise, addFunction, h
 		if (process.env.NODE_ENV !== 'development' || testMode) checkAuth()
 	}, [checkAuth]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
 
+    useEffect(() => {
+        if (!isNew && selectedExercise) {
+            setProgressedDate(dayjs(selectedExercise.progressed))
+            setTotalTime(selectedExercise.total_time_ms)
+            setTrialExercises(selectedExercise.trial_exercises)
+            setMemo(selectedExercise.memo)
+        }
+        else {
+            setProgressedDate(dayjs())
+            setTotalTime("")
+            setTrialExercises([])
+            setMemo("")
+        }
+    }, [isNew, selectedExercise])
+
     return (
-        <Modal show={show} onShow={renderSelected} onHide={handleClose} size='xl'>
-            <Modal.Header style={{paddingLeft: "20px", paddingRight: "40px"}} closeButton>
-            <Modal.Title>
-                <span className={cx("title")}>
-                    <strong>운동 치료 기록 {isNew ? "추가" : "편집"}</strong>
-                </span></Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                <div className={cx("contents")}>
-                    <div className={cx("page-title")}>
-                        <span>기본 사항</span>
-                    </div>
-                    <div className={cx("page-content")}>
-                        <div className={cx("group-field")}> 
-                            <div className={cx("group-content")}>
-                                <div className={cx("inline")}>
-                                    <div className={`${cx("cell")} ${cx("large")}`}>
-                                        <InputGroup>
-                                            <InputGroup.Text>치료 일시</InputGroup.Text>
-                                            <Form.Control
-                                                type="date"
-                                                placeholder="치료 일시"
-                                                value={progressedDate}
-                                                onChange={(e) => setProgressedDate(e.target.value)}
-                                            >
-                                            </Form.Control>
-                                        </InputGroup>
-                                    </div>
-                                </div>
-                                <div className={cx("inline")}>
-                                    <div className={`${cx("cell")} ${cx("large")}`}>
-                                        <InputGroup>
-                                            <InputGroup.Text>총 치료 시간 (분)</InputGroup.Text>
-                                            <Form.Control
-                                                type="number"
-                                                placeholder="총 치료 시간"
-                                                value={totalTime}
-                                                onChange={(e) => setTotalTime(e.target.value)}
-                                            >
-                                            </Form.Control>
-                                        </InputGroup>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className={cx("page-title")} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>시행 운동 정보</span>
-                        <Button variant="secondary" onClick={() => setTrialExercises([...trialExercises, {primary_class: "upper extremity", secondary_class: "upper_limb", tertiary_class: "hand/wrist", exercise: "mobility", amount_type: "초"}])}>추가</Button>
-                    </div>
-                    {trialExercises.map((exercise, index) => {
-                        return (
-                            <div className={cx("page-content")} key={index} style={{ display: 'flex', borderBottom: '1px solid gray', paddingBottom: '10px' }}>
-                                <div className={cx("group-field")} style={{ marginBottom: '0px', height: 'auto' }}> 
-                                    <div className={cx("group-content")}>
-                                        <div className={cx("inline")}>
-                                            <div className={`${cx("cell")} ${cx("large")}`}>
-                                                <InputGroup>
-                                                    <InputGroup.Text>담당 의사</InputGroup.Text>
-                                                    <Form.Select
-                                                        value={exercise.therapist ?? ""}
-                                                        onChange={(e) => setTrialExercises([
-                                                            ...trialExercises.slice(0, index), 
-                                                            {...exercise, therapist: e.target.value}, 
-                                                            ...trialExercises.slice(index+1)])}
-                                                    >
-                                                        {userList.map((user) => {
-                                                            return (
-                                                                <option key={user.id} value={user.id}>{`${user.position} ${user.last_name}${user.first_name}`}</option>
-                                                            )
-                                                        })}
-                                                    </Form.Select>
-                                                </InputGroup>
-                                            </div>
-                                        </div>
-                                        <div className={cx("inline")}>
-                                            <div className={`${cx("cell")}`}>
-                                                <InputGroup>
-                                                    <InputGroup.Text>1단계 분류</InputGroup.Text>
-                                                    <Form.Select
-                                                        value={exercise.primary_class ?? ""}
-                                                        onChange={(e) => {
-                                                            let initialSecondary = Object.keys(exerciseClassifier[e.target.value])[0]
-                                                            setTrialExercises([
+        <Sheet
+            variant="outlined"
+            sx={{
+                position: 'relative',
+                borderRadius: 'sm',
+                p: 1,
+                width: '100%',
+                flexShrink: 0,
+                left: show ? "-100%" : 0,
+                transition: 'left 0.4s ease',
+                display: 'flex',
+                flexDirection: 'column'
+            }}
+        >
+            <Box sx={{ 
+                    display: 'flex', 
+                    gap: 2,
+                    justifyContent: 'space-between',
+                    p: '0px 5px'
+                }}>
+                    <Typography 
+                        fontWeight="600" 
+                        fontSize="20px"
+                        sx={{
+                            color: '#32383e',
+                            margin: 'auto 0'
+                        }}
+                    >운동치료 기록 {isNew ? "추가" : "편집"}
+                    </Typography>
+                    <IconButton
+                        variant='plain' 
+                        onClick={() => {handleClose(false)}}
+                        sx={{ }}
+                    ><Close />
+                    </IconButton>
+            </Box>
+            <Divider component="div" sx={{ my: 1 }} />
+            <Box
+                className="scrollable vertical"
+                sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    p: '0 5px',
+                    margin: '10px 0',
+                    alignItems: 'middle',
+                    flex: '1 1 0',
+                }}
+            >    
+                <FormAccordion defaultExpanded>
+                    <FormAccordionSummary>
+                        <FormAccordionHeader>운동치료 항목</FormAccordionHeader>
+                    </FormAccordionSummary>
+                    <FormAccordionDetails>
+                        <Stack direction='column' gap={2} sx={{ 
+                            justifyContent: 'space-between',
+                            p: '0px 5px',
+                            alignItems: 'middle'
+                        }}>
+                            <FormControl size="md" error={!validationCheck(totalTime) && submitted}>
+                                <FormLabel>총 치료 시간 (분)</FormLabel>
+                                <Input
+                                    type="number"
+                                    placeholder="검사 강도"
+                                    value={totalTime}
+                                    onChange={(e) => setTotalTime(e.target.value)}
+                                    sx={{
+                                        backgroundColor: '#ffffff'
+                                    }}
+                                />
+                                {!validationCheck(totalTime) && submitted && 
+                                    <FormHelperText>
+                                        <InfoOutlined />
+                                        필수 입력란입니다.
+                                    </FormHelperText>                            
+                                }                           
+                            </FormControl>
+                            <Divider></Divider>
+                            {trialExercises.map((exercise, index) => {
+                                return (
+                                    <React.Fragment key={index}>
+                                        <Stack direction='row' gap={2} sx={{ px: 5, justifyContent: 'space-between'}}>
+                                            <Stack gap={2} sx={{ flex: '1 1 auto' }}>
+                                                <Stack direction='row' gap={2} sx={{ pr: 5, justifyContent: 'space-between' }}>
+                                                    <FormControl size="md" error={!validationCheck(exercise.therapist) && submitted} sx={{ flex: '1 1 0' }}>
+                                                        <FormLabel>담당 의사</FormLabel>
+                                                        <Select
+                                                            size="md"
+                                                            placeholder="진단 선택"
+                                                            value={+exercise.therapist}
+                                                            onChange={(_, value) => setTrialExercises([
                                                                 ...trialExercises.slice(0, index), 
-                                                                {
-                                                                    ...exercise, 
-                                                                    primary_class: e.target.value,
-                                                                    secondary_class: initialSecondary,
-                                                                    tertiary_class: Object.keys(exerciseClassifier[e.target.value][initialSecondary])[0]
-                                                                }, 
-                                                                ...trialExercises.slice(index+1)
-                                                            ])
-                                                        }}
-                                                    >
-                                                        {Object.keys(exerciseClassifier).map((part, index) => {
-                                                            return (
-                                                                <option key={index} value={part}>{`${part}`}</option>
-                                                            )
-                                                        })}
-                                                    </Form.Select>
-                                                </InputGroup>
-                                            </div>
-                                            <div className={`${cx("cell")}`}>
-                                            <InputGroup>
-                                                    <InputGroup.Text>2단계 분류</InputGroup.Text>
-                                                    <Form.Select
-                                                        value={exercise.secondary_class ?? ""}
-                                                        onChange={(e) => setTrialExercises([
-                                                            ...trialExercises.slice(0, index), 
-                                                            {
-                                                                ...exercise, 
-                                                                secondary_class: e.target.value,
-                                                                tertiary_class: Object.keys(exerciseClassifier[exercise.primary_class ?? ""][e.target.value])[0]
-                                                            }, 
-                                                            ...trialExercises.slice(index+1)])}
-                                                    >
-                                                        {Object.keys(exerciseClassifier[exercise.primary_class ?? ""]).map((part, index) => {
-                                                            return (
-                                                                <option key={index} value={part}>{`${part}`}</option>
-                                                                
-                                                            )
-                                                        })}
-                                                    </Form.Select>
-                                                </InputGroup>
-                                            </div>
-                                        </div>
-                                        <div className={cx("inline")}>
-                                            <div className={`${cx("cell")}`}>
-                                                <InputGroup>
-                                                    <InputGroup.Text>3단계 분류</InputGroup.Text>
-                                                    <Form.Select
-                                                        value={exercise.tertiary_class ?? ""}
-                                                        onChange={(e) => setTrialExercises([
-                                                            ...trialExercises.slice(0, index), 
-                                                            {...exercise, tertiary_class: e.target.value}, 
-                                                            ...trialExercises.slice(index+1)])}
-                                                        disabled={exerciseClassifier[exercise.primary_class ?? ""][exercise.secondary_class ?? ""].length === 0}
-                                                    >   
-                                                        {exerciseClassifier[exercise.primary_class ?? ""][exercise.secondary_class ?? ""].map((part, index) => {
-                                                            return (
-                                                                <option key={index} value={part}>{`${part}`}</option>
-                                                            )
-                                                        })}
-                                                    </Form.Select>
-                                                </InputGroup>
-                                            </div>
-                                            <div className={`${cx("cell")}`}>
-                                                <InputGroup>
-                                                    <InputGroup.Text>운동 이름</InputGroup.Text>
-                                                    <Form.Select
-                                                        value={exercise.exercise ?? ""}
-                                                        onChange={(e) => setTrialExercises([
-                                                            ...trialExercises.slice(0, index), 
-                                                            {...exercise, exercise: e.target.value}, 
-                                                            ...trialExercises.slice(index+1)])}
-                                                    >
-                                                        {exerciseName.map((part, index) => {
-                                                            return (
-                                                                <option key={index} value={part}>{`${part}`}</option>
-                                                            )
-                                                        })}
-                                                    </Form.Select>
-                                                </InputGroup>
-                                            </div>
-                                        </div>
-                                        <div className={cx("inline")}>
-                                            <div className={`${cx("cell")}  ${cx("small")}`}>
-                                                <InputGroup>
-                                                    <InputGroup.Text>세트 당</InputGroup.Text>
-                                                    <Form.Control
-                                                        type="number"
-                                                        placeholder="수치"
-                                                        value={exercise.amount ?? ""}
-                                                        onChange={(e) => setTrialExercises([
-                                                            ...trialExercises.slice(0, index), 
-                                                            {...exercise, amount: +e.target.value}, 
-                                                            ...trialExercises.slice(index+1)])}
-                                                    >
-                                                    </Form.Control>
-                                                    <Form.Select
-                                                        value={exercise.amount_type ?? "초"}
-                                                        onChange={(e) => setTrialExercises([
-                                                            ...trialExercises.slice(0, index), 
-                                                            {...exercise, amount_type: e.target.value}, 
-                                                            ...trialExercises.slice(index+1)])}
-                                                    >
-                                                        {trialAmountType.map((part, index) => {
-                                                            return (
-                                                                <option key={index} value={part}>{`${part}`}</option>
-                                                            )
-                                                        })}
-                                                    </Form.Select>
-                                                </InputGroup>
-                                            </div>
-                                            <div className={`${cx("cell")} ${cx("small")}`}>
-                                                <InputGroup>
-                                                    <InputGroup.Text>시행 세트</InputGroup.Text>
-                                                    <Form.Control
-                                                        type="number"
-                                                        placeholder={"세트"}
-                                                        value={exercise.sets ?? ""}
-                                                        onChange={(e) => setTrialExercises([
-                                                            ...trialExercises.slice(0, index), 
-                                                            {...exercise, sets: +e.target.value}, 
-                                                            ...trialExercises.slice(index+1)])}
-                                                    >
-                                                    </Form.Control>
-                                                </InputGroup>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <Button variant="secondary" onClick={(e) => setTrialExercises([...trialExercises.slice(0, index), ...trialExercises.slice(index+1)])}>-</Button>
-                            </div>
-                        )
-                    })}
-                    <div className={cx("page-title")} style={{ marginTop: '20px' }}>
-                        <span>치료사 소견</span>
-                    </div>
-                    <div className={cx("page-content")}>
-                        <div className={cx("group-field")}> 
-                            <div className={cx("group-content")}>
-                                <div className={cx("inline")}>
-                                    <div className={`${cx("cell")}`}>
-                                        <InputGroup>
-                                            <InputGroup.Text>메모</InputGroup.Text>
-                                            <Form.Control
-                                                as="textarea"
-                                                rows={3}
-                                                value={memo}
-                                                onChange={(e) => setMemo(e.target.value)}
-                                            >
-                                            </Form.Control>
-                                        </InputGroup>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </Modal.Body>
-            <Modal.Footer>
-                <div className={cx("inline-btn")}>
-                    <Button variant="primary" onClick={handleAddExerciseHistory}>
-                        {isNew ? "추가": "변경"}
-                    </Button>
-                    <Button variant="secondary" onClick={handleClose}>
-                        취소
-                    </Button>
-                </div>
-            </Modal.Footer>
-        </Modal>
+                                                                {...exercise, therapist: value?.toString() ?? ""}, 
+                                                                ...trialExercises.slice(index+1)])}
+                                                            sx={{
+                                                                backgroundColor: '#ffffff'
+                                                            }}
+                                                        >
+                                                            {userList.map((user) => {
+                                                                return (
+                                                                    <Option key={user.id} value={user.id}>{`${user.position} ${user.last_name}${user.first_name}`}</Option>
+                                                                )
+                                                            })}
+                                                        </Select>
+                                                        {!validationCheck(exercise.therapist) && submitted && 
+                                                            <FormHelperText>
+                                                                <InfoOutlined />
+                                                                필수 입력란입니다.
+                                                            </FormHelperText>                            
+                                                        }                           
+                                                    </FormControl>
+                                                    <FormControl size="md" error={!validationCheck(exercise.primary_class) && submitted} sx={{ flex: '1 1 0' }}>
+                                                        <FormLabel>1단계 분류</FormLabel>
+                                                        <Select
+                                                            size="md"
+                                                            placeholder="진단 선택"
+                                                            value={exercise.primary_class}
+                                                            onChange={(_, value) => {
+                                                                if (value === null) return
+                                                                setTrialExercises([
+                                                                    ...trialExercises.slice(0, index), 
+                                                                    {...exercise, primary_class: value}, 
+                                                                    ...trialExercises.slice(index+1)
+                                                                ])
+                                                            }}
+                                                        >
+                                                            {Object.keys(exerciseClassifier).map((part, index) => {
+                                                                return (
+                                                                    <Option key={index} value={part}>{`${part}`}</Option>
+                                                                )
+                                                            })}
+                                                        </Select>
+                                                        {!validationCheck(exercise.primary_class) && submitted && 
+                                                            <FormHelperText>
+                                                                <InfoOutlined />
+                                                                필수 입력란입니다.
+                                                            </FormHelperText>                     
+                                                        }                           
+                                                    </FormControl>
+                                                    <FormControl size="md" error={!validationCheck(exercise.secondary_class) && submitted} sx={{ flex: '1 1 0' }}>
+                                                        <FormLabel>2단계 분류</FormLabel>
+                                                        <Select
+                                                            size="md"
+                                                            placeholder="진단 선택"
+                                                            value={exercise.secondary_class}
+                                                            onChange={(_, value) => {
+                                                                if (value === null) return
+                                                                setTrialExercises([
+                                                                    ...trialExercises.slice(0, index), 
+                                                                    {...exercise, secondary_class: value}, 
+                                                                    ...trialExercises.slice(index+1)
+                                                                ])
+                                                            }}
+                                                            disabled={exercise.primary_class === ""}
+                                                        >
+                                                            {exercise.primary_class !== "" && Object.keys(exerciseClassifier[exercise.primary_class]).map((part, index) => {
+                                                                return (
+                                                                    <Option key={index} value={part}>{`${part}`}</Option>
+                                                                )
+                                                            })}
+                                                        </Select>
+                                                        {!validationCheck(exercise.secondary_class) && submitted && 
+                                                            <FormHelperText>
+                                                                <InfoOutlined />
+                                                                필수 입력란입니다.
+                                                            </FormHelperText>                            
+                                                        }                           
+                                                    </FormControl>
+                                                    <FormControl size="md" error={!validationCheck(exercise.tertiary_class) && submitted} sx={{ flex: '1 1 0' }}>
+                                                        <FormLabel>3단계 분류</FormLabel>
+                                                        <Select
+                                                            size="md"
+                                                            placeholder="진단 선택"
+                                                            value={exercise.tertiary_class}
+                                                            onChange={(_, value) => {                                                    
+                                                                if (value === null) return
+                                                                setTrialExercises([
+                                                                    ...trialExercises.slice(0, index), 
+                                                                    {...exercise, tertiary_class: value}, 
+                                                                    ...trialExercises.slice(index+1)
+                                                                ])
+                                                            }}
+                                                            disabled={exercise.primary_class === "" || exercise.secondary_class === "" || exerciseClassifier[exercise.primary_class][exercise.secondary_class].length === 0}
+                                                        >
+                                                            {(exercise.primary_class !== "" && exercise.secondary_class !== "" && exerciseClassifier[exercise.primary_class][exercise.secondary_class]) && exerciseClassifier[exercise.primary_class][exercise.secondary_class].map((part, index) => {
+                                                                return (
+                                                                    <Option key={index} value={part}>{`${part}`}</Option>
+                                                                )
+                                                            })}
+                                                        </Select>
+                                                        {!validationCheck(exercise.tertiary_class) && submitted && 
+                                                            <FormHelperText>
+                                                                <InfoOutlined />
+                                                                필수 입력란입니다.
+                                                            </FormHelperText>                            
+                                                        }                           
+                                                    </FormControl>
+                                                </Stack>
+                                                <Stack direction='row' gap={2} sx={{ pr: 5, justifyContent: 'space-between'}}>
+                                                    <FormControl size="md" error={!validationCheck(exercise.exercise) && submitted} sx={{ flex: '1 1 0' }}>
+                                                        <FormLabel>운동 이름</FormLabel>
+                                                        <Select
+                                                            size="md"
+                                                            placeholder="진단 선택"
+                                                            value={exercise.exercise}
+                                                            onChange={(_, value) => {
+                                                                if (value === null) return
+                                                                setTrialExercises([
+                                                                    ...trialExercises.slice(0, index), 
+                                                                    {...exercise, exercise: value}, 
+                                                                    ...trialExercises.slice(index+1)
+                                                                ])
+                                                            }}
+                                                        >
+                                                            {exerciseName.map((part, index) => {
+                                                                return (
+                                                                    <Option key={index} value={part}>{`${part}`}</Option>
+                                                                )
+                                                            })}
+                                                        </Select>
+                                                        {!validationCheck(exercise.exercise) && submitted && 
+                                                            <FormHelperText>
+                                                                <InfoOutlined />
+                                                                필수 입력란입니다.
+                                                            </FormHelperText>                            
+                                                        }                           
+                                                    </FormControl>                                        
+                                                    <FormControl size="md" error={!validationCheck(exercise.amount) && submitted} sx={{ flex: '1 1 0' }}>
+                                                        <FormLabel>세트 당 시간/횟수</FormLabel>
+                                                        <Input
+                                                            type='number'
+                                                            size="md"
+                                                            placeholder="값"
+                                                            value={exercise.amount}
+                                                            onChange={(e) => {
+                                                                setTrialExercises([
+                                                                    ...trialExercises.slice(0, index), 
+                                                                    {...exercise, amount: +e.target.value}, 
+                                                                    ...trialExercises.slice(index+1)
+                                                                ])
+                                                            }}
+                                                        />
+                                                        {!validationCheck(exercise.amount) && submitted && 
+                                                            <FormHelperText>
+                                                                <InfoOutlined />
+                                                                필수 입력란입니다.
+                                                            </FormHelperText>                            
+                                                        }                           
+                                                    </FormControl>
+                                                    <FormControl size="md" error={!validationCheck(exercise.amount_type) && submitted} sx={{ flexDirection: 'column-reverse', flex: '1 1 0' }}>
+                                                        <Select
+                                                            size="md"
+                                                            placeholder="단위"
+                                                            value={exercise.amount_type}
+                                                            onChange={(_, value) => {
+                                                                if (value === null) return
+                                                                setTrialExercises([
+                                                                    ...trialExercises.slice(0, index), 
+                                                                    {...exercise, amount_type: value}, 
+                                                                    ...trialExercises.slice(index+1)
+                                                                ])
+                                                            }}
+                                                        >
+                                                            {trialAmountType.map((part, index) => {
+                                                                return (
+                                                                    <Option key={index} value={part}>{`${part}`}</Option>
+                                                                )
+                                                            })}
+                                                        </Select>
+                                                        {!validationCheck(exercise.amount_type) && submitted && 
+                                                            <FormHelperText>
+                                                                <InfoOutlined />
+                                                                필수 입력란입니다.
+                                                            </FormHelperText>                            
+                                                        }                           
+                                                    </FormControl>
+                                                    <FormControl size="md" error={!validationCheck(exercise.sets) && submitted} sx={{ flex: '1 1 0' }}>
+                                                        <FormLabel>시행 세트</FormLabel>
+                                                        <Input
+                                                            type='number'
+                                                            size="md"
+                                                            placeholder="값"
+                                                            value={exercise.sets}
+                                                            onChange={(e) => {
+                                                                setTrialExercises([
+                                                                    ...trialExercises.slice(0, index), 
+                                                                    {...exercise, sets: +e.target.value}, 
+                                                                    ...trialExercises.slice(index+1)
+                                                                ])
+                                                            }}
+                                                        />
+                                                        {!validationCheck(exercise.sets) && submitted && 
+                                                            <FormHelperText>
+                                                                <InfoOutlined />
+                                                                필수 입력란입니다.
+                                                            </FormHelperText>                            
+                                                        }                           
+                                                    </FormControl>   
+                                                </Stack>
+                                            </Stack>
+                                            <IconButton onClick={(e) => setTrialExercises([...trialExercises.slice(0, index), ...trialExercises.slice(index+1)])}>
+                                                <Delete/>
+                                            </IconButton>
+                                        </Stack>
+                                        <Divider/>
+                                    </React.Fragment>
+                                )
+                            })}                            
+                        </Stack>
+                        <IconButton onClick={() => setTrialExercises([...trialExercises, initialTrial])}> 
+                            <Add/> 
+                        </IconButton>
+                    </FormAccordionDetails>
+                </FormAccordion>
+                <FormAccordion defaultExpanded>
+                    <FormAccordionSummary>
+                        <FormAccordionHeader>기타</FormAccordionHeader>
+                    </FormAccordionSummary>
+                    <FormAccordionDetails>
+                        <Stack direction='column' gap={2} sx={{ 
+                            justifyContent: 'space-between',
+                            p: '0px 5px',
+                            alignItems: 'middle'
+                        }}>
+                        <FormControl size="md">
+                            <FormLabel>진료일자</FormLabel>
+                            <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ko">
+                                <DateTimePicker 
+                                    value={dayjs(progressedDate)} 
+                                    onChange={(e) => {setProgressedDate(dayjs(e))}}
+                                    orientation="portrait"
+                                    viewRenderers={{
+                                        hours: renderTimeViewClock,
+                                        minutes: renderTimeViewClock,
+                                        seconds: renderTimeViewClock
+                                    }}
+                                    format="YYYY/MM/DD a hh:mm"
+                                    sx={{
+                                        backgroundColor: '#ffffff'
+                                    }}
+                                    ampm
+                                />
+                            </LocalizationProvider>
+                        </FormControl>
+                        <FormControl size="md">
+                            <FormLabel>비고</FormLabel>
+                            <Textarea
+                                minRows={1}
+                                placeholder="기타 사항"
+                                value={memo}
+                                onChange={(e) => setMemo(e.target.value)}
+                                sx={{
+                                    backgroundColor: '#ffffff'
+                                }}
+                            />
+                        </FormControl>
+                    </Stack>
+                    </FormAccordionDetails>
+                </FormAccordion>
+            </Box>
+            <Divider component="div" sx={{ my: 1 }} />
+            <Button variant='soft' onClick={handleAddExerciseHistory} sx={{ margin: 'auto', width: '50%' }}>
+                {isNew ? "추가": "변경"}
+            </Button>
+        </Sheet>
     )
 }
 

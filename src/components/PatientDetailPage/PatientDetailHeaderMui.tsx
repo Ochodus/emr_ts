@@ -3,18 +3,15 @@ import { Box, Divider, Sheet, Stack } from '@mui/joy';
 import IconButton from '@mui/joy/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import { Patient, PhysicalExam } from '../../interfaces';
-import styles from './PatientDetailHeader.module.css';
-import classNames from 'classnames/bind';
 import { toggleSidebar } from '../../api/commons/utils';
 import { Typography } from '@mui/material';
-import { Face, Face2 } from '@mui/icons-material'
-
-
-
-// import { toggleSidebar } from '../utils';
+import { ChangeCircleOutlined, Face, Face2 } from '@mui/icons-material'
+import { useNavigate } from 'react-router-dom';
+import React from 'react';
 
 const PatientDetailHeaderMui = ({ curPatient, lastPhysicalExam, setSubPage }: { curPatient: Patient & {id: number} | undefined, lastPhysicalExam: PhysicalExam | undefined, setSubPage: (page: string) => void}) => {
-    const cx = classNames.bind(styles)
+    const navigate = useNavigate()
+    
     return (
         <Sheet
             sx={{
@@ -54,7 +51,6 @@ const PatientDetailHeaderMui = ({ curPatient, lastPhysicalExam, setSubPage }: { 
             >
                 <MenuIcon />
             </IconButton>
-
             <Stack 
                 direction={{ xs: 'column', md: 'row' }}
                 sx={{
@@ -63,8 +59,8 @@ const PatientDetailHeaderMui = ({ curPatient, lastPhysicalExam, setSubPage }: { 
                     alignItems: 'center'
                 }}
                 spacing={{ xs: 1, md: 2 }}
-            >
-                <Stack 
+            >   {curPatient ?                 
+                <><Stack 
                     direction='row'
                     sx={{
                         alignItems: 'center',
@@ -72,10 +68,10 @@ const PatientDetailHeaderMui = ({ curPatient, lastPhysicalExam, setSubPage }: { 
                     }}
                     spacing={1}
                 >
-                    <Typography className={cx("patient-name")} component='div'>
+                    <Typography color='gray' fontWeight={550} component='div'>
                         {`${curPatient?.last_name}${curPatient?.first_name}`}
                     </Typography>
-                    <Typography className={cx("patient-detail")} component='div' sx={{margin: 'auto'}}>
+                    <Typography color='gray' component='div' sx={{margin: 'auto'}}>
                         {+(curPatient?.sex ?? "") === 0 ? <Face /> : <Face2 /> }, {new Date().getFullYear() - new Date(curPatient?.birthday ?? "").getFullYear()}세  {curPatient?.birthday}
                     </Typography>
                 </Stack>
@@ -99,29 +95,42 @@ const PatientDetailHeaderMui = ({ curPatient, lastPhysicalExam, setSubPage }: { 
                         alignItems: 'center',
                         minWidth: '335px'
                     }}
-                    spacing={1}
+                    gap={2}
                 >
-                    <Typography className={cx("patient-state")} padding='auto'>
-                        체온
-                    </Typography>
-                    <Typography className={cx("value")}>
-                        {lastPhysicalExam?.body_temperature} ℃
-                    </Typography>
-                    <Typography className={cx("patient-state")}>
-                        체중
-                    </Typography>
-                    <Typography className={cx("value")}>
-                        {lastPhysicalExam?.weight} kg
-                    </Typography>
-                    <Typography className={cx("patient-state")}>
-                        신장
-                    </Typography>
-                    <Typography className={cx("value")}>
-                        {lastPhysicalExam?.height} cm
-                    </Typography>
-                    <Typography className={cx("patient-state")}>
-                        ({lastPhysicalExam?.recorded.replaceAll('"', '').split('T')[0]})
-                    </Typography>
+                    {
+                        lastPhysicalExam?.body_temperature && lastPhysicalExam?.weight && lastPhysicalExam?.height ? 
+                        <React.Fragment>
+                            <Stack direction='row' gap={1}>
+                                <Typography fontWeight={550}>
+                                    체온
+                                </Typography>
+                                <Typography color='gray'>
+                                    {lastPhysicalExam?.body_temperature} ℃
+                                </Typography>
+                            </Stack>
+                            <Stack direction='row' gap={1}>
+                                <Typography fontWeight={550}>
+                                    체중
+                                </Typography>
+                                <Typography color='gray'>
+                                    {lastPhysicalExam?.weight} kg
+                                </Typography>
+                            </Stack>
+                            <Stack direction='row' gap={1}>
+                                <Typography fontWeight={550}>
+                                    신장
+                                </Typography>
+                                <Typography color='gray'>
+                                    {lastPhysicalExam?.height} cm
+                                </Typography>
+                            </Stack>
+                            <Typography color='gray'>
+                                ({lastPhysicalExam?.recorded.replaceAll('"', '').split('T')[0]})
+                            </Typography>
+                        </React.Fragment> :
+                        <Typography>신체검사 내역이 없습니다.</Typography>
+                    
+                    }
                 </Stack>
                 <Divider 
                     orientation='vertical'
@@ -145,7 +154,7 @@ const PatientDetailHeaderMui = ({ curPatient, lastPhysicalExam, setSubPage }: { 
                     spacing={1}
                 >
                     {curPatient ? 
-                        <Typography className={cx("patient-state")}>
+                        <Typography fontWeight={550}>
                             보호자
                         </Typography>
                     : null
@@ -154,18 +163,18 @@ const PatientDetailHeaderMui = ({ curPatient, lastPhysicalExam, setSubPage }: { 
                         curPatient.noks?.map((nok, index) => { 
                             return (
                                 index < 2 ?
-                                <Box>
+                                <Box key={index}>
                                     <Stack direction='row' 
                                         sx={{
                                             alignItems: 'center',
                                         }}
                                         spacing={1}
                                     >
-                                        <Typography className={cx("value")}>
+                                        <Typography color='gray' fontWeight={550}>
                                             {`${nok.last_name}${nok.first_name},`}
                                         </Typography>
-                                            {nok.relationship === '부' || nok.relationship === '조부' ? <Face /> : <Face2 />}
-                                        <Typography className={cx("value")}>
+                                            {nok.relationship === '부' || nok.relationship === '조부' ? <Face sx={{ color: 'gray' }}/> : <Face2 sx={{ color: 'gray' }}/>}
+                                        <Typography color='gray'>
                                             {`${new Date().getFullYear() - new Date(nok.birthday ?? "").getFullYear()}세`}
                                         </Typography>
                                     </Stack>
@@ -174,7 +183,13 @@ const PatientDetailHeaderMui = ({ curPatient, lastPhysicalExam, setSubPage }: { 
                             )
                         }) : null
                     }
-                </Stack>
+                    <IconButton
+                        variant='plain' 
+                        onClick={() => {navigate(`../patient-detail/`)}} 
+                    >
+                        <ChangeCircleOutlined />
+                    </IconButton>
+                </Stack></> : <Typography fontWeight={550}>환자를 선택해주세요.</Typography>}
             </Stack>
         </Sheet>
     );

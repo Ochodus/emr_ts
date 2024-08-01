@@ -1,0 +1,209 @@
+.scrollable {
+    transition: mask-position 0.3s, -webkit-mask-position 0.3s;
+    overflow: auto;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+    background: rgba(110, 162, 213);
+    border-radius: 10px;
+}
+
+.scrollable::-webkit-scrollbar-track {
+    background: rgba(110, 162, 213, .1);
+}
+
+.scrollable.horizontal::-webkit-scrollbar {
+    height: 10px;
+}
+
+.scrollable.vertical::-webkit-scrollbar {
+    width: 10px;
+}
+
+.scrollable.vertical {
+    mask-image: linear-gradient(to top, transparent, black),
+        linear-gradient(to left, transparent 10px, black 10px);
+    mask-size: 100% 20000px;
+    mask-position: left bottom;
+}
+  
+.scrollable.vertical:hover {
+    mask-position: left top;
+}
+
+.scrollable.horizontal {
+    mask-image: linear-gradient(to top, transparent 10px, black 10px),
+        linear-gradient(to left, transparent, black);
+    mask-size: 20000px 100%;
+    mask-position: right top;
+}
+
+.scrollable.horizontal:hover {
+    mask-position: left top;
+}
+
+@keyframes managetostatus {
+    0% {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/patientData.jpg)
+    }
+    49% {
+        background-image: url(/public/images/patientData.jpg)
+    }
+    50% {
+        transform: rotateY(90deg);
+        background-image: url(/public/images/status.webp)
+    }
+    100% {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/status.webp)
+    }
+}
+
+@keyframes statustomanage {
+    0% {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/status.webp)
+    }
+    49% {
+        background-image: url(/public/images/status.webp)
+    }
+    50% {
+        transform: rotateY(90deg);
+        background-image: url(/public/images/patientData.jpg)
+    }
+    100% {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/patientData.jpg)
+    }
+}
+
+@keyframes statustopending {
+    0% {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/status.webp)
+    }
+    49% {
+        background-image: url(/public/images/status.webp)
+    }
+    50% {
+        transform: rotateY(90deg);
+        background-image: url(/public/images/user-mngmnt.jpg)
+    }
+    100% {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/user-mngmnt.jpg)
+    }
+}
+
+@keyframes pendingtostatus {
+    0% {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/user-mngmnt.jpg);
+    }
+    49% {
+        background-image: url(/public/images/user-mngmnt.jpg)
+    }
+    50% {
+        transform: rotateY(90deg);
+        background-image: url(/public/images/status.webp)
+    }
+    100% {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/status.webp)
+    }
+}
+
+@keyframes pendingtomanage {
+    0% {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/user-mngmnt.jpg)
+    }
+    49% {
+        background-image: url(/public/images/user-mngmnt.jpg)
+    }
+    50% {
+        transform: rotateY(90deg);
+        background-image: url(/public/images/patientData.jpg)
+    }
+    to {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/patientData.jpg)
+    }
+}
+
+@keyframes managetopending {
+    0% {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/patientData.jpg)
+    }
+    49% {
+        background-image: url(/public/images/patientData.jpg)
+    }
+    50% {
+        transform: rotateY(90deg);
+        background-image: url(/public/images/user-mngmnt.jpg)
+    }
+    to {
+        transform: rotateY(0deg);
+        background-image: url(/public/images/user-mngmnt.jpg)
+    }
+}
+
+.managetomanage {
+    background-image: url(/public/images/patientData.jpg);
+    background-size: cover;
+}
+
+.statustostatus {
+    background-image: url(/public/images/status.webp);
+    background-size: cover;
+}
+
+.pendingtopending {
+    background-image: url(/public/images/user-mngmnt.jpg);
+    background-size: cover;
+}
+
+.managetostatus {
+    animation-duration: 0.6s;
+    animation-name: managetostatus;
+    animation-fill-mode: forwards;
+    background-size: cover;
+}
+
+.statustomanage {
+    animation-duration: 0.6s;
+    animation-name: statustomanage;
+    animation-fill-mode: forwards;
+    background-size: cover;
+}
+
+.statustopending {
+    animation-duration: 0.6s;
+    animation-name: statustopending;
+    animation-fill-mode: forwards;
+    background-size: cover;
+}
+
+.pendingtostatus {
+    animation-duration: 1s;
+    animation-name: pendingtostatus;
+    animation-fill-mode: forwards;
+    background-size: cover;
+}
+
+.pendingtomanage {
+    animation-duration: 1s;
+    animation-name: pendingtomanage;
+    animation-fill-mode: forwards;
+    background-size: cover;
+}
+
+.managetopending {
+    animation-duration: 1s;
+    animation-name: managetopending;
+    animation-fill-mode: forwards;
+    background-size: cover;
+}
+

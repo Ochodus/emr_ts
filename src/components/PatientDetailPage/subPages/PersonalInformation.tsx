@@ -1,26 +1,4 @@
-import React, { useState } from "react";
-
 const PersonalInformation = () => {
-  const [year, setYear] = useState("");
-  const [num, setNum] = useState("");
-  const [relation, setRelation] = useState("");
-  const [agent, setAgent] = useState("");
-  const [month, setMonth] = useState("");
-  const [day, setDay] = useState("");
-  const [inputValue, setInputValue] = useState("");
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>, stateUpdater: React.Dispatch<React.SetStateAction<string>>) => {
-    // 입력한 값을 상태에 업데이트
-    stateUpdater(event.target.value);
-    setInputValue(event.target.value); // 입력된 값을 저장하는 상태 업데이트
-  };
-
-  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, stateUpdater: React.Dispatch<React.SetStateAction<string>>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      console.log("입력 내용:", inputValue);
-      stateUpdater(inputValue);
-    }
-  };
-
   return (
     <div className="detail-structure">
       <div style={{ paddingTop: "20px", paddingLeft: "40px", paddingRight: "40px" }}>

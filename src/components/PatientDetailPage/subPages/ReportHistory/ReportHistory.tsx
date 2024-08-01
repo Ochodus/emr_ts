@@ -1,100 +1,86 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Table } from "../../../commons/Table";
-import { Card, Button } from "react-bootstrap";
-import { TableHeader } from "../../../commons/Table"
 import { ReportHistoryAddModal } from ".";
-import { ReactComponent as AddIcon } from '../../../../assets/add_icon.svg';
 import { useParams } from 'react-router-dom';
 import axios from "axios";
 import { useLocalTokenValidation } from "../../../../api/commons/auth";
-import styles from './ReportHistory.module.css';
-import classNames from 'classnames/bind';
+import { Box, Divider, IconButton, Sheet, Stack, Tooltip, Typography } from "@mui/joy";
+import { Alert, TableMui } from "../../../commons";
+import { HeadCell, ID } from "../../../commons/TableMui";
+import { Delete, EditNote, PostAdd } from "@mui/icons-material";
+import { Update } from "./ReportHistoryAddModal";
+import { BASE_BACKEND_URL } from "api/commons/request";
+import { prettyPrint } from "api/commons/utils";
+import isLeapYear from 'dayjs/plugin/isLeapYear'
+import utc from "dayjs/plugin/utc"
+import 'dayjs/locale/ko'
+import dayjs from "dayjs";
+import React from "react";
+
+dayjs.extend(isLeapYear)
+dayjs.extend(utc)
+dayjs.locale('ko')
 
 export interface ChangeInfo {
-	start_value: number | object,
-	end_value: number | object,
+	start_value: string,
+	end_value: string,
 	importance: 'high'|'low'|'res',
 	target_dir: 'inc'|'dec'|'res'
 }
 
-export interface Changes {
-	name: string,
-	before_value: number,
-	before_trial: number,
-	after_value: number,
-	after_trial: number,
-	is_improved: boolean
-}
-
 export interface Report {
-	startDate: string,
-	endDate: string,
-	changes: Changes[],
-	changes_detail?: object,
+	report_date: string,
+	changes: Update[],
 	memo: string
 } // Report 객체 타입
 
-const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axiosMode: boolean }) => {
+const ReportHistory = ({ axiosMode }: { axiosMode: boolean }) => {
 	const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
-	const cx = classNames.bind(styles)
 
-	const headers: TableHeader = [
-		{ 
-			Header: "리포트 기간",
-			accessor: "startDate",
-			Cell: ({ row }) => {
-				return (
-					<div>
-						{`${row.original.startDate} ~ ${row.original.endDate}`}
-					</div>
-				)
-			},
-			width: 40
-		},
-		{ 
-			Header: "변화 항목",
-			accessor: "changes",
-			Cell: ({ row }) => (
-				<div>
-					{row.original.changes.map((change: Changes, index: number) => {
-						return row.original.changes.length - 1 !== index ? `${change.name}, ` : `${change.name}`
-					})}
-				</div>
-			),
-			width: 40
-		},
-		{ 
-			Header: "기타 항목",
-			accessor: "changes_detial",
-			Cell: ({ row }) => (
-				<div>
-					{ JSON.stringify(row.original.changes_detail) }
-				</div>
-			),
-			width: 40
-		},
-		{ 
-			Header: "비고",
-			accessor: "memo",
-			width: 40
+	const headCells: HeadCell<Report & ID>[] = [
+		{
+		  id: 'report_date',
+		  numeric: false,
+		  label: '작성 일자',
+		  parse: (value: (Report & ID)[keyof (Report & ID)]) => {
+			return dayjs(value.toString()).format('YYYY년 MM월 DD일 HH시 mm분')
+		  }
 		},
 		{
-			Header: "수정 및 삭제",
-			accessor: "edit",
-			Cell: ({ row }) => (
-				<div className={cx('editing-buttons')}>
-					<Button className={cx('cell-button')} onClick={() => handleModalOpen(false, row.index)}>수정</Button>
-					<Button className={cx('cell-button')} onClick={() => deleteReportHistory(row.index)}>삭제</Button>
-				</div>
-			),
-			width: 100
+		  id: 'changes',
+		  numeric: true,
+		  label: '변화 항목',
+		  parse: (value: (Report & ID)[keyof (Report & ID)]) => {
+			return (
+                value ?
+					<div style={{ display: 'flex', justifyContent: 'center' }}>
+						<Tooltip 
+							title={
+								<Box className='scrollable vertical' sx={{ p: 1, height: '20vh' }}>
+									<pre style={{ textAlign: 'left', display: 'inline-block', marginBottom: '0'}}>
+										{prettyPrint(value)}
+									</pre>
+								</Box>                            
+							}
+						>
+						<pre style={{ textAlign: 'left', display: 'inline-block', marginBottom: '0'}}>
+							{prettyPrint(value).split('\n')[0]} ...
+						</pre>
+						</Tooltip>
+					</div> : ""
+				)
+            }
 		},
+		{
+			id: 'memo',
+			numeric: false,
+			label: '비고'
+		}
 	];
 
 	const { patient_id } = useParams();
 	const auth = window.localStorage.getItem("persist:auth")
 	const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
-	const url = `/api/patients/${patient_id}/medical/reports`
+	const url = `${BASE_BACKEND_URL}/api/patients/${patient_id}/medical/reports`
 
 	const config = useMemo(() => {
 		return {
@@ -104,11 +90,11 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 		}
 	}, [accessToken])
 
-	const [reportHistory, setReportHistory] = useState<(Report & {id: number})[]>([]);
-
-	const [isModalVisible, setIsModalVisible] = useState(false) // 환자 추가/편집 모달 표시 여부
-	const [isNewReport, setIsNewReport] = useState(false) // 모달의 추가/편집 모드
-	const [targetReportIndex, setTargetReportIndex] = useState<number>(-1) // 수정 및 삭제에 사용되는 타깃 환자 인덱스 (로컬 데이터 기준 인덱스 / 환자 고유 아이디와 다름)
+	const [reportHistory, setReportHistory] = useState<(Report & ID)[]>([]);
+	const [isNewReport, setIsNewReport] = useState(false)
+	const [toggleEditor, setToggleEditor] = useState<boolean>(false)	
+	const [selected, setSelected] = useState<number[]>([]);
+	const [showDeletionAlert, setShowDeletionAlert] = useState<boolean>(false)
 
 	const getReportHistory = useCallback(async () => {
 		try {
@@ -123,11 +109,12 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 		}
 	}, [config, url])
 	
-	const postMedicalRecord = async (newReport: Report, isNewReport: boolean) => {
+	const postReport = async (newReport: Report, isNewReport: boolean) => {
 		try {
-			isNewReport || !reportHistory ? await axios.post(url, newReport, config) : await axios.patch(`${url}/${reportHistory[targetReportIndex].id}`, newReport, config)
+			isNewReport || !reportHistory ? await axios.post(url, newReport, config) : await axios.patch(`${url}/${reportHistory.filter((value) => {return value.id === selected[0]})[0].id}`, newReport, config)
 		  	console.log("진료 기록 추가 성공");
 			getReportHistory();
+			setToggleEditor(false)
 		} catch (error) {
 		  	console.error("진료 기록 추가 중 오류 발생:", error);
 		}
@@ -135,27 +122,16 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 
 	const deleteReportHistory = async (targetReportIndex: number) => {
 		if (reportHistory) {
-			let targetId = reportHistory[targetReportIndex].id
-			console.log(`${url}/${targetId}`)
+			let targetId = reportHistory.filter((value) => {return value.id === targetReportIndex})[0].id
 			try {
-				await axios.delete(
-					`${url}/${targetId}`,
-					config
-				)
+				let response = await axios.delete(`${BASE_BACKEND_URL}${url}/${targetId}`, config)
+				console.log(response)
 				getReportHistory()
 			} catch (error) {
 				console.error("환자 삭제 중 오류 발생:", error)
 			}
 		}
 	} // 환자 삭제
-
-	const handleModalOpen = (isNewReport: boolean, targetReportIndex: number) => {
-		setIsNewReport(isNewReport)
-		setTargetReportIndex(targetReportIndex)
-		setIsModalVisible(true)
-	} // 모달 띄우기
-
-	const handleModalClose = () => setIsModalVisible(false) // 모달 닫기
 
 	useEffect(() => {
 		if (axiosMode) getReportHistory();
@@ -167,53 +143,104 @@ const ReportHistory = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 	  }, [checkAuth, axiosMode]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
 
 	return (
-		<div>
-			{ !isSummaryMode ?
-			<div className={cx("section_wrap")}>
-				<Card className={cx("field-table")}>
-					<Card.Header style={{ display: "flex" }}>
-						<div className={cx("col-inline")}>
-							<span style={{ fontSize: "30px", paddingLeft: "10px" }}>
-								<strong>리포트 내역</strong>
-							</span>
-						</div>
-						<div className={`${cx("col-inline")} ${cx("col-inline-right")}`}>
-							<div className={cx("button-group")} onClick={() => handleModalOpen(true, -1)}>
-								<AddIcon fill="#454545" className={cx("button-add")}/>
-							</div>
-						</div>
-					</Card.Header>
-					<Card.Body>
-						<div className={cx("section")}>
-							<div className={cx("section-body")}>
-								<Table 
-									headers={headers} 
-									items={reportHistory} 
-									useSelector={true}
-									table_width="calc(100% - 20px)"
-								/>
-							</div>
-						</div>
-					</Card.Body>
-				</Card>
+		<React.Fragment>
+			<Box
+				sx={{
+					m: '1rem',
+					display: 'flex',
+					overflow: "hidden",
+					flexWrap: 'nowrap',
+				}}
+			>
+				<Sheet
+					variant="outlined"
+					sx={{
+						position: 'relative',
+						borderRadius: 'sm',
+						p: 1,
+						width: '100%',
+						flexShrink: 0,
+						left: toggleEditor ? "-100%" : 0,
+						transition: 'left 0.4s ease',
+						display: 'flex',
+						flexDirection: 'column'
+					}}
+				>
+					<Box sx={{ 
+						display: 'flex', 
+						gap: 2,
+						justifyContent: 'space-between',
+						p: '0px 5px'
+					}}>
+						<Typography 
+							fontWeight="600" 
+							fontSize="20px"
+							sx={{
+								color: '#32383e',
+								margin: 'auto 0'
+							}}
+							
+						>레포트 기록
+						</Typography>
+							<Stack direction='row'
+								sx={{ transition: 'width 0.4s ease' }}
+							>
+								<IconButton
+									variant='plain' 
+									onClick={() => {setIsNewReport(true); setToggleEditor(true)}}
+								><PostAdd />
+								</IconButton>
+								<IconButton
+									variant='plain' 
+									onClick={() => {setIsNewReport(false); setToggleEditor(true)}}
+									disabled={selected.length !== 1}
+								><EditNote />
+								</IconButton>
+								<IconButton
+									variant='plain' 
+									onClick={() => setShowDeletionAlert(true)}
+									disabled={selected.length === 0}
+								><Delete />
+								</IconButton>
+							</Stack>
+						</Box>
+						<Divider component="div" sx={{ my: 1 }} />
+						<Box sx={{
+							flexDirection: 'column',
+							justifyContent: 'center',
+							p: '5px',
+							overflow: 'auto',
+							'&::-webkit-scrollbar': {
+								display: 'none'
+							}
+						}}>
+							<TableMui<Report & ID>
+								headCells={headCells} 
+								rows={reportHistory}
+								defaultRowNumber={18}
+								selected={selected}
+								setSelected={setSelected}
+							/>
+						</Box>
+					</Sheet>
 				<ReportHistoryAddModal 
-					show={isModalVisible} 
-					handleClose={handleModalClose} 
+					show={toggleEditor} 
 					isNew={isNewReport} 
-					selectedReport={reportHistory ? reportHistory[targetReportIndex] : null}
-					addFunction={postMedicalRecord}
+					selectedReport={reportHistory ? reportHistory.filter((value) => {return value.id === selected[0]})[0] : null}
+					handleClose={setToggleEditor} 
+					addReport={postReport}
 				></ReportHistoryAddModal>
-			</div> :
-			<div className={cx("section-body")}>
-				<Table 
-					headers={headers} 
-					items={reportHistory} 
-					useSelector={true}
-					table_width="calc(100% - 20px)"
-				/>
-			</div>
-			}
-		</div>
+			</Box>
+			<Alert 
+				showDeletionAlert={showDeletionAlert} 
+				setShowDeletionAlert={setShowDeletionAlert} 
+				deleteFunction={() => {
+					selected.forEach((recordId) => {deleteReportHistory(recordId)}) 
+					setShowDeletionAlert(false)
+					setSelected([])
+				}}
+			/>
+		</React.Fragment>
 	)
 }
 

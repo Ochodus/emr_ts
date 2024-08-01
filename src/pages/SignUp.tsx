@@ -1,77 +1,64 @@
 import { useState } from "react";
 import axios from "axios";
-import Button from 'react-bootstrap/Button';
-import Form from 'react-bootstrap/Form';
-import InputGroup from 'react-bootstrap/InputGroup'
 import { useNavigate } from "react-router-dom";
-import 'bootstrap/dist/css/bootstrap.min.css';
-import styles from './SignUp.module.css'
-import classNames from 'classnames/bind';
+import { Box, Card, CardActions, CardOverflow, Divider, FormControl, FormLabel, IconButton, Input, Select, Stack, Typography, Option, Button, Chip, Sheet, FormHelperText } from "@mui/joy";
+import { EmailRounded, InfoOutlined, Password, Visibility, VisibilityOff } from "@mui/icons-material";
+import { validationCheck } from "api/commons/utils";
+import { BASE_BACKEND_URL } from "api/commons/request";
 
 const SignUp = () => {
-	const cx = classNames.bind(styles)
 	const navigate = useNavigate()
 
-	const [FirstName, setFirstName] = useState("")
-	const [SecondName, setSecondName] = useState("")
+	const [firstName, setFirstName] = useState("")
+	const [lastName, setLastName] = useState("")
 	const [email, setEmail] = useState("")
-	const [phoneN, setPhoneN] = useState(["", "", ""])
+	const [phoneN, setPhoneN] = useState(["", ""])
 	const [passw, setPassw] = useState("")
 	const [passwC, setPasswC] = useState("")
-	const [showPswd, setShowPswd] = useState("")
+	const [showPswd, setShowPswd] = useState<boolean>(false)
 	const [selectedPosition, setSelectedPosition] = useState("원장")
 	const [selectedDepartment, setSelectedDepartment] = useState("통증")
 
-	const [isTriedToSignUp, setIsTriedToSignUp] = useState(false) // 회원 가입 시도 여부
-	const [isFormValid, setIsFormValid] = useState({name: false, phoneN: false, email: false, passw: false, passwC: false})
+	const [submitted, setSubmitted] = useState(false) // 회원 가입 시도 여부
 
-  	const handleRegistrationClick = () => {
-		setIsTriedToSignUp(true)
-		if (!formValidationCheck()) {
-			alert("유효하지 않은 입력 필드가 있습니다.")
-			return
-		}
-		post_signup()
-  	} // 회원 가입 버튼 클릭 시 이벤트
+  const handleRegistrationClick = () => {
+    setSubmitted(true)
 
-	const setPositionChange = (e: string) => {
-		setSelectedPosition(e)
-	} 
+    if (!formValidationCheck()) {
+      alert("유효하지 않은 입력 필드가 있습니다.")
+      return
+    }
+
+    post_signup()
+  } // 회원 가입 버튼 클릭 시 이벤트
 
 	const formValidationCheck = () => {
-		let nameCheck = FirstName !== "" && SecondName !== ""
-		let phoneNCheck = phoneN[1] !== "" && phoneN[2] !== ""
+
+		let nameCheck = firstName !== "" && lastName !== ""
+		let phoneNCheck = phoneN[0] !== "" && phoneN[1] !== ""
 		let emailCheck = email !== ""
 		let passwCheck = passw !== ""
 		let passwCCheck = passw === passwC
 
-		setIsFormValid({
-			...isFormValid, 
-			name: nameCheck,
-			phoneN: phoneNCheck,
-			email: emailCheck,
-			passw: passwCheck,
-			passwC: passwCCheck
-		})
-
 		return nameCheck && phoneNCheck && emailCheck && passwCheck && passwCCheck
 	} // 회원 가입 폼 유효성 검사
 
-  	const post_signup = async () => {
+  const post_signup = async () => {
 		try {
-		const response = await axios.post(
-			"/api/auth/signup",
-			{
-			email: email,
-			password: passw,
-			first_name: FirstName,
-			last_name: SecondName,
-			position: selectedPosition,
-			sex: 0,
-			phone_number: `${phoneN[0]}-${phoneN[1]}-${phoneN[2]}`,
-			department: selectedDepartment,
-			}
-		)
+      const response = await axios.post(
+        `${BASE_BACKEND_URL}/api/auth/signup`,
+        {
+          email: email,
+          password: passw,
+          first_name: firstName,
+          last_name: lastName,
+          position: selectedPosition,
+          sex: 0,
+          phone_number: `010-${phoneN[0]}-${phoneN[1]}`,
+          department: selectedDepartment,
+          profile_url: ""
+        }
+		  )
 
 		const token = response.data
 
@@ -83,162 +70,268 @@ const SignUp = () => {
 		}
 	} // 회원 가입 벡앤드 요청
 
-  return (
-    <div className={cx('structure-signup')}>
-        <img id={cx('logo-signup-page')} src={`${process.env.PUBLIC_URL}/images/logo.png`} alt="doctor" />
-        <div id={cx('field-signup')}>
-            <div id={cx('text-detail-signup')}>
-                <h3>사용자 등록</h3>
-                <p>병원 관계자만 회원 가입이 가능합니다.</p>
-            </div>
-            <Form id={cx('input-group-signup')}>
-              <div className={cx("row-group")}>
-                <div className={cx("inline")}>
-                  <div className={`${cx("cell")}`}>
-                    <InputGroup>
-                      <InputGroup.Text className={cx("input-label")}>성명</InputGroup.Text>
-                      <Form.Control
-                        type="text"
-                        placeholder="성"
-                        value={SecondName}
+  return (    
+    <Sheet sx={{ height: '100vh' }}>
+      <Box
+				component="header"
+				sx={{
+					py: 3,
+					display: 'flex',
+					justifyContent: 'center',
+				}}
+			>
+				<Box sx={{ gap: 10, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+				<IconButton size="sm" onClick={() => navigate('/login')}>
+					<img src={`${process.env.PUBLIC_URL}/images/logo.png`} alt=""/>
+				</IconButton>
+				</Box>
+			</Box>
+      <Box sx={{ flex: 1, width: '100%' }}>
+        <Stack
+          spacing={4}
+          sx={{
+            display: 'flex',
+            mx: 'auto',
+            maxWidth: '85vw',
+            px: { xs: 2, md: 6 },
+            py: { xs: 2, md: 3 },
+          }}
+        >
+          <Card>
+            <Box sx={{ mb: 1 }}>
+              <Typography level="h4" sx={{ mb: 1 }}>사용자 등록</Typography>
+              <Typography level="body-sm">
+                병원 관계자만 회원 가입이 가능합니다.
+              </Typography>
+            </Box>
+            <Divider />
+            <Stack
+              direction="row"
+              spacing={3}
+              sx={{ display: { xs: 'flex', md: 'flex', lg: 'flex' }, my: 1 }}
+            >
+              <Stack spacing={2} sx={{ flexGrow: 1 }}>
+                <Stack spacing={1} direction={{ xs: 'column', lg: 'row'}}>                  
+                  <FormControl sx={{ flexGrow: 1 }} error={!validationCheck(lastName) && submitted}>
+                    <FormLabel>이름</FormLabel>
+                    <Input 
+                      size="sm" 
+                      placeholder="성"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      sx={{
+                        backgroundColor: '#ffffff'
+                      }}
+                    />
+                    {!validationCheck(lastName) && submitted && 
+                      <FormHelperText>
+                        <InfoOutlined />
+                        필수 입력란입니다.
+                      </FormHelperText>                            
+                    }     
+                  </FormControl>                  
+                  <FormControl sx={{ flexGrow: 1 }} error={!validationCheck(firstName) && submitted}>
+                    <FormLabel sx={{ display: { xs: 'none', md: 'none', lg: 'block'} }}><br></br></FormLabel>
+                    <Input 
+                      size="sm" 
+                      placeholder="이름" 
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      sx={{
+                        backgroundColor: '#ffffff'
+                      }}
+                    />
+                    {!validationCheck(firstName) && submitted && 
+                      <FormHelperText>
+                        <InfoOutlined />
+                        필수 입력란입니다.
+                      </FormHelperText>                            
+                    }   
+                  </FormControl>
+                </Stack>
+                <Divider/>
+                <Stack direction={{ xs: 'column', lg: 'row'}} spacing={2}>
+                  <FormControl sx={{ flexGrow: 1 }}>
+                    <FormLabel>직위</FormLabel>
+                    <Select
+                      size="md"
+                      placeholder="직위 선택"
+                      value={selectedPosition}
+                      renderValue={(selected) => (
+                          <Chip variant="soft" color="primary">
+                              {selected?.label}
+                          </Chip>
+                      )}
+                      slotProps={{ button: { sx: { whiteSpace: 'nowrap' } } }}
+                      onChange={(_, value) => setSelectedPosition(value ?? "")}
+                      sx={{
+                          backgroundColor: '#ffffff'
+                      }}
+                  >
+                      {['원장', '국장', '간호조무사', '물리치료사', '기타'].map((position, index) => {
+                          return (
+                              <Option key={index} value={position}>{`${position}`}</Option>
+                          )
+                      })}
+                  </Select>
+                  </FormControl>
+                  <FormControl sx={{ flexGrow: 1 }}>
+                    <FormLabel>부서</FormLabel>
+                    <Select
+                      size="md"
+                      placeholder="부서 선택"
+                      value={selectedDepartment}
+                      renderValue={(selected) => (
+                          <Chip variant="soft" color="primary">
+                              {selected?.label}
+                          </Chip>
+                      )}
+                      slotProps={{ button: { sx: { whiteSpace: 'nowrap' } } }}
+                      onChange={(_, value) => setSelectedDepartment(value ?? "")}
+                      sx={{
+                          backgroundColor: '#ffffff'
+                      }}
+                  >
+                      {['통증', '센터', '기타'].map((department, index) => {
+                          return (
+                              <Option key={index} value={department}>{`${department}`}</Option>
+                          )
+                      })}
+                  </Select>
+                  </FormControl>                  
+                </Stack>
+                <Divider/>
+                <Stack direction={{ xs: 'column', lg: 'row'}} spacing={2}>
+                  <Stack  direction={{ xs: 'column', md:'row', lg: 'row'}} spacing={1}>
+                    <FormControl sx={{ flexGrow: 1 }}>
+                      <FormLabel>전화번호</FormLabel>
+                      <Input
                         size="sm"
-                        onChange={(e) => setSecondName(e.target.value)}
-                      />
-                      <Form.Control
-                        type="text"
-                        placeholder="이름"
-                        value={FirstName}
-                        size="sm"
-                        onChange={(e) => setFirstName(e.target.value)}
-                      />
-                    </InputGroup>
-                  </div>
-                </div>
-                {isFormValid.name || !isTriedToSignUp ? null : <div className={cx("form-unvalid-msg")}>* 필수 입력란입니다.</div>}
-                <div className={cx("inline")}>
-                  <div className={`${cx("cell")}`}>
-                    <InputGroup>
-                      <InputGroup.Text className={cx("input-label")}>전화번호</InputGroup.Text>
-                      <Form.Select
-                        value={phoneN[0]}
-                        onChange={(e) => setPhoneN([e.target.value, phoneN[1], phoneN[2]])}
-                      >
-                          <option>010</option>
-                      </Form.Select>
-                      <div className={cx("dash")}> - </div>
-                      <Form.Control
                         type="number"
-                        className={cx("phoneNumber")}
-                        value={phoneN[1]}
-                        onChange={(e) => setPhoneN([phoneN[0], e.target.value, phoneN[2]])}
-                      >
-                      </Form.Control>
-                      <div className={cx("dash")}> - </div>
-                      <Form.Control
-                          type="number"
-                          className={cx("phoneNumber")}
-                          value={phoneN[2]}
-                        onChange={(e) => setPhoneN([phoneN[0], phoneN[1], e.target.value])}
-                      >
-                      </Form.Control>
-                    </InputGroup>
-                  </div>
-                </div>
-                {isFormValid.phoneN || !isTriedToSignUp ? null : <div className={cx("form-unvalid-msg")}>* 필수 입력란입니다.</div>}
-              </div>
-              <div className={cx("row-group")}>
-              <div className={cx("inline")}>
-                  <div className={`${cx("cell")}`}>
-                    <InputGroup>
-                      <InputGroup.Text className={cx("input-label")}>이메일</InputGroup.Text>
-                      <Form.Control
-                        type="email"
-                        placeholder="example@onnuri.com"
-                        value={email}
-                        size="sm"
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </InputGroup>
-                  </div>
-                </div>
-                {isFormValid.email || !isTriedToSignUp ? null : <div className={cx("form-unvalid-msg")}>* 필수 입력란입니다.</div>}
-                <div className={cx("inline")}>
-                  <div className={`${cx("cell")}`}>
-                    <InputGroup>
-                      <InputGroup.Text className={cx("input-label")}>비밀번호</InputGroup.Text>
-                      <Form.Control
-                        type="password"
+                        value={'010'}
                         placeholder=""
-                        value={passw}
-                        size="sm"
-                        onChange={(e) => setPassw(e.target.value)}
-                      />
-                    </InputGroup>
-                  </div>
-                </div>
-                {isFormValid.passw || !isTriedToSignUp ? null : <div className={cx("form-unvalid-msg")}>* 필수 입력란입니다.</div>}
-                <div className={cx("inline")}>
-                  <div className={`${cx("cell")}`}>
-                    <InputGroup>
-                      <InputGroup.Text className={cx("input-label")}>비밀번호 확인</InputGroup.Text>
-                      <Form.Control
-                        type="password"
-                        placeholder=""
-                        value={passwC}
-                        size="sm"
-                        onChange={(e) => {
-                          setPasswC(e.target.value)
+                        disabled={true}
+                        sx={{
+                          backgroundColor: '#ffffff'
                         }}
                       />
-                    </InputGroup>
-                  </div>
-                </div>
-                {passw === passwC || passwC === "" ? null : <div className={cx("form-unvalid-msg")}>* 비밀번호가 일치하지 않습니다.</div>}
-              </div>
-              <div className={cx("row-group")}>
-                <div className={cx("inline")}>
-                  <div className={`${cx("cell")}`}>
-                    <InputGroup>
-                      <InputGroup.Text className={cx("input-label")}>직위</InputGroup.Text>
-                      <Form.Select
-                        value={selectedPosition}
+                    </FormControl>
+                    <FormControl error={!validationCheck(phoneN[0]) && submitted} sx={{ flexGrow: 1 }}>
+                      <FormLabel sx={{ display: { xs: 'none', md: 'block'} }}><br/></FormLabel>
+                      <Input
                         size="sm"
-                        onChange={(e) => setPositionChange(e.target.value)}
-                      >
-                        <option>원장</option>
-                        <option>국장</option>
-                        <option>간호조무사</option>
-                        <option>물리치료사</option>
-                      </Form.Select>
-                    </InputGroup>
-                  </div>
-                  <div className={`${cx("cell")} ${cx("blank")}`}></div>
-                  <div className={`${cx("cell")}`}>
-                    <InputGroup>
-                      <InputGroup.Text className={cx("input-label")}>부서</InputGroup.Text>
-                      <Form.Select
-                        value={selectedDepartment}
+                        type="number"
+                        value={phoneN[0]}
+                        onChange={(e) => setPhoneN([e.target.value, phoneN[1]])}
+                        placeholder=""
+                        sx={{
+                          backgroundColor: '#ffffff'
+                        }}
+                      />
+                      {!validationCheck(phoneN[0]) && submitted && 
+                        <FormHelperText>
+                          <InfoOutlined />
+                          필수 입력란입니다.
+                        </FormHelperText>                            
+                      } 
+                    </FormControl>
+                    <FormControl error={!validationCheck(phoneN[1]) && submitted} sx={{ flexGrow: 1 }}>
+                      <FormLabel sx={{ display: { xs: 'none', md: 'block'} }}><br/></FormLabel>
+                      <Input
                         size="sm"
-                        onChange={(e) => setSelectedDepartment(e.target.value)}
-                      >
-                        <option>통증</option>
-                        <option>센터</option>
-                      </Form.Select>
-                    </InputGroup>
-                  </div>
-                </div>
-              </div>
-              <div className={cx("btn-group-submit")}>
-                <Button variant="secondary" className={cx('btn-signup-exit')} size="lg" onClick={() => navigate('/login')}>
-                  돌아가기
+                        type="number"
+                        value={phoneN[1]}
+                        onChange={(e) => setPhoneN([phoneN[0], e.target.value])}
+                        placeholder=""
+                        sx={{
+                          backgroundColor: '#ffffff'
+                        }}
+                      />
+                      {!validationCheck(phoneN[1]) && submitted && 
+                        <FormHelperText>
+                          <InfoOutlined />
+                          필수 입력란입니다.
+                        </FormHelperText>                            
+                      }
+                    </FormControl>                    
+                  </Stack>
+                  <Divider/>
+                  <FormControl sx={{ flexGrow: 1 }} error={!validationCheck(email) && submitted}>
+                    <FormLabel>이메일</FormLabel>
+                    <Input
+                      size="sm"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      startDecorator={<EmailRounded />}
+                      placeholder="example@example.com"
+                      sx={{ backgroundColor: '#ffffff' }}                      
+                    />
+                    {!validationCheck(email) && submitted && 
+                      <FormHelperText>
+                        <InfoOutlined />
+                        필수 입력란입니다.
+                      </FormHelperText>                            
+                    }
+                  </FormControl>                  
+                </Stack>
+                <Divider/>
+                <Stack direction={{ xs: 'column', lg: 'row'}} spacing={2}>
+                  <FormControl sx={{ flexGrow: 1 }} error={!validationCheck(passw) && submitted}>
+                    <FormLabel>비밀번호</FormLabel>
+                    <Input
+                      size="sm"
+                      type={showPswd ? "text" : "password"}
+                      startDecorator={<Password />}
+                      endDecorator={<IconButton onClick={() => {setShowPswd(!showPswd)}}>{showPswd ? <Visibility/> : <VisibilityOff/>}</IconButton>}
+                      placeholder="Password"
+                      value={passw}
+                      onChange={(e) => {setPassw(e.target.value)}}
+                      sx={{ backgroundColor: '#ffffff' }}
+                    />
+                    {!validationCheck(passw) && submitted && 
+                      <FormHelperText>
+                        <InfoOutlined />
+                        필수 입력란입니다.
+                      </FormHelperText>                            
+                    }
+                  </FormControl>
+                  <FormControl sx={{ flexGrow: 1 }} error={passwC !== passw && passw !== ""}>
+                    <FormLabel>비밀번호 확인</FormLabel>
+                    <Input
+                      size="sm"
+                      type={showPswd ? "text" : "password"}
+                      startDecorator={<Password />}
+                      endDecorator={<IconButton onClick={() => {setShowPswd(!showPswd)}}>{showPswd ? <Visibility/> : <VisibilityOff/>}</IconButton>}
+                      placeholder="Password confirm"
+                      value={passwC}
+                      onChange={(e) => {setPasswC(e.target.value)}}
+                      sx={{ backgroundColor: '#ffffff' }}
+                    />
+                    {passwC !== passw && passw !== "" &&
+                      <FormHelperText>
+                        <InfoOutlined />
+                        비밀번호가 일치하지 않습니다.
+                      </FormHelperText>                            
+                    }
+                  </FormControl>
+                </Stack>
+              </Stack>
+            </Stack>
+            <CardOverflow sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+              <CardActions sx={{ alignSelf: 'flex-end', pt: 2 }}>
+                <Button size="sm" variant="outlined" color="neutral" onClick={() => navigate('/login')}>
+                  취소
                 </Button>
-                <Button variant="info" className={cx('btn-signup-confirm')} size="lg" onClick={handleRegistrationClick}>
-                  가입하기
+                <Button size="sm" variant="solid" onClick={handleRegistrationClick}>
+                  가입
                 </Button>
-              </div>
-            </Form>
-        </div>
-    </div>
+              </CardActions>
+            </CardOverflow>
+          </Card>
+        </Stack>
+      </Box>
+    </Sheet>
   );
 };
 

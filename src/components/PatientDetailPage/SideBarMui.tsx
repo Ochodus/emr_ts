@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Sheet, GlobalStyles, Box, IconButton, Typography, Input, List, ListItem, ListItemContent, Divider, Avatar } from '@mui/joy'
-import { BrightnessAutoRounded, SearchRounded, AssignmentRounded, KeyboardArrowDown, SettingsAccessibility, Info, LogoutRounded } from '@mui/icons-material';
+import { SearchRounded, AssignmentRounded, KeyboardArrowDown, SettingsAccessibility, Info, LogoutRounded, Home } from '@mui/icons-material';
 import ListItemButton, { listItemButtonClasses } from '@mui/joy/ListItemButton'
 import { useLocalTokenValidation } from '../../api/commons/auth';
-import { useRequestAPI } from '../../api/commons/request';
-import { CurrentUser } from '../../pages/UserInformation';
 import { closeSidebar } from '../../api/commons/utils';
-
-const { Sidebar, Menu, SubMenu, MenuItem, menuClasses } = require('react-pro-sidebar');
+import { Patient, User } from '../../interfaces';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { BASE_BACKEND_URL } from 'api/commons/request';
 
 function Toggler({
     defaultExpanded = false,
@@ -41,30 +41,38 @@ function Toggler({
     );
   }
 
-const SideBarMui = ({ setSubPage }: { setSubPage: (s: string) => any}) => {
+const SideBarMui = ({ curPatient, setSubPage }: { curPatient: Patient & {id: number} | undefined, setSubPage: (s: string) => any}) => {
     const checkAuth = useLocalTokenValidation()
-    const request = useRequestAPI()
-    const auth = JSON.parse(window.localStorage.getItem("persist:auth") ?? "[]")
+    const navigate = useNavigate()
     
-    const [currentUser, setCurrentUser] = useState<CurrentUser>()
+    const auth = window.localStorage.getItem("persist:auth")
+    const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
 
-    const handleResponsedUserData = (data: any) => {
-		console.log(data)
-		setCurrentUser({
-			name: [data.last_name, data.first_name],
-			phoneNumber: ['010', data.phone_number.split('-')[1], data.phone_number.split('-')[2]],
-			email: [...data.email.split('@'), "직접 입력"],
-			gender: `${data.sex}`,
-			selectedPosition: data.position,
-			selectedDepartment: data.department,
-			userIconUrl: data.profile_url
-		})
-	}
+    const config = useMemo(() => {
+		return {
+			headers: {
+				Authorization: "Bearer " + accessToken,
+			}
+		}
+    }, [accessToken]);
+
+    const [currentUser, setCurrentUser] = useState<User>()
+
+    const getCurrentUser = useCallback(async () => {
+		try {
+			const response = await axios.get(`${BASE_BACKEND_URL}/api/users/me`, config)
+			return response.data
+		} catch (error) {
+			console.error("사용자 조회 중 오류 발생:", error)
+		}
+	}, [config])
 
     useEffect(() => {
-        checkAuth(".")
-		request("/api/users/me", 'get', undefined, handleResponsedUserData)
-    }, [])
+		checkAuth(".")
+		getCurrentUser().then((result) => {
+            setCurrentUser(result)
+        })
+    }, [checkAuth, getCurrentUser])
 
     return (
         <div>
@@ -120,10 +128,10 @@ const SideBarMui = ({ setSubPage }: { setSubPage: (s: string) => any}) => {
                     onClick={() => closeSidebar()}
                 />
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <IconButton variant="soft" color="primary" size="sm">
-                    <BrightnessAutoRounded />
+                    <IconButton variant="soft" color="primary" size="sm" onClick={ () => navigate('../../') }>
+                    <Home />
                     </IconButton>
-                    <Typography level="title-lg">환자 상세</Typography>
+                    <Typography level="title-lg">환자 데이터베이스</Typography>
                     {/* <ColorSchemeToggle sx={{ ml: 'auto' }} /> */}
                 </Box>
                 <Input size="sm" startDecorator={<SearchRounded />} placeholder="Search" />
@@ -149,18 +157,18 @@ const SideBarMui = ({ setSubPage }: { setSubPage: (s: string) => any}) => {
                         >
                         <ListItem nested>
                             <Toggler
-                                    renderToggle={({ open, setOpen }) => (
-                                        <ListItemButton onClick={() => setOpen(!open)}>
-                                        <SettingsAccessibility />
-                                        <ListItemContent>
-                                            <Typography level="title-sm">환자 정보</Typography>
-                                        </ListItemContent>
-                                        <KeyboardArrowDown
-                                            sx={{ transform: open ? 'rotate(180deg)' : 'none' }}
-                                        />
-                                        </ListItemButton>
-                                    )}
-                                >
+                                renderToggle={({ open, setOpen }) => (
+                                    <ListItemButton onClick={() => setOpen(!open)} disabled={curPatient === undefined}>
+                                    <SettingsAccessibility />
+                                    <ListItemContent>
+                                        <Typography level="title-sm">환자 정보</Typography>
+                                    </ListItemContent>
+                                    <KeyboardArrowDown
+                                        sx={{ transform: open ? 'rotate(180deg)' : 'none' }}
+                                    />
+                                    </ListItemButton>
+                                )}
+                            >
                                 <List sx={{ gap: 0.5 }}>
                                     <ListItem sx={{ mt: 0.5 }}>
                                         <ListItemButton onClick={() => setSubPage("summary")}>환자 요약 및 통계</ListItemButton>
@@ -174,7 +182,7 @@ const SideBarMui = ({ setSubPage }: { setSubPage: (s: string) => any}) => {
                         <ListItem nested>
                             <Toggler
                                 renderToggle={({ open, setOpen }) => (
-                                    <ListItemButton onClick={() => setOpen(!open)}>
+                                    <ListItemButton onClick={() => setOpen(!open)} disabled={curPatient === undefined}>
                                     <AssignmentRounded />
                                     <ListItemContent>
                                         <Typography level="title-sm">진료 / 검사 내역</Typography>
@@ -207,7 +215,7 @@ const SideBarMui = ({ setSubPage }: { setSubPage: (s: string) => any}) => {
                         <ListItem nested>
                             <Toggler
                                     renderToggle={({ open, setOpen }) => (
-                                        <ListItemButton onClick={() => setOpen(!open)}>
+                                        <ListItemButton onClick={() => setOpen(!open)} disabled={curPatient === undefined}>
                                         <Info />
                                         <ListItemContent>
                                             <Typography level="title-sm">기타 자료</Typography>
@@ -235,10 +243,10 @@ const SideBarMui = ({ setSubPage }: { setSubPage: (s: string) => any}) => {
                     <Avatar
                         variant="outlined"
                         size="sm"
-                        src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=286"
+                        src={currentUser?.profile_url}
                     />
                     <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography level="title-sm">{currentUser?.name}</Typography>
+                        <Typography level="title-sm">{`${currentUser?.last_name}${currentUser?.first_name}`}</Typography>
                         <Typography level="body-xs">{currentUser?.email}</Typography>
                     </Box>
                     <IconButton size="sm" variant="plain" color="neutral">

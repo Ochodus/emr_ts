@@ -9,11 +9,12 @@ export const useLocalTokenValidation = () => {
         token: string
     }
 
-    const checkAuthValid = useCallback(async (path: string | null = null) => {
+    const checkAuthValid = useCallback(async (path: string | null = null, token: string | null = null) => {
         const local_auth_string: string | null = localStorage.getItem('persist:auth')
         const local_auth_json: LocalAuth | null = local_auth_string ? JSON.parse(local_auth_string) : null
         
-        const local_auth_token: string | null = local_auth_json ? JSON.parse(local_auth_json.token) : null
+        const local_auth_token: string | null = token ? token : (local_auth_json ? JSON.parse(local_auth_json.token) : null)
+        if (!local_auth_token || local_auth_token === "") {navigate('/login'); return false}
 
         let config = {
             headers: {
@@ -21,16 +22,15 @@ export const useLocalTokenValidation = () => {
             },
         };
         try {
-            const response = await axios.get(
-            `/api/users`,
-            config
+            await axios.get(
+                `/api/users`,
+                config
             );
 
             path ? navigate(path) : navigate(`.`)
 
             return true
         } catch (error) {
-            console.log("dd")
             navigate('/login')
             return false
         }
