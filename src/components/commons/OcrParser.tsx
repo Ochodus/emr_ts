@@ -14,6 +14,7 @@ import { MuiFileInput } from 'mui-file-input'
 import CloseIcon from '@mui/icons-material/Close'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import * as pdfjs from 'pdfjs-dist'
+import { BASE_OCR_URL } from 'api/commons/request';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -188,12 +189,12 @@ const OcrParser = ({ type=0, isMask=true, setOcrResult, file, setFile, cv, small
     // Request clova api when click the convert button
     const requestWithFile = (isMasked: boolean, indicator: string) => {
       let target = document.getElementById(`ocr-target-${index}-${indicator}`) as any
-      var file_name = target?.files[0]['name'].split('.')[0] // image file object.
+      var file_name = target?.files[0]['name'].split('.')[0] // 파일 이름
       var canvas = isMasked ? document.getElementById(`ocr_original_masked-${index}-${indicator}`) as any : document.getElementById(`ocr_original-${index}-${indicator}`) as any
 
-      canvas?.toBlob((blob: string) => {
-        var file = new File([blob], file_name + ".png", {type: "image/png"})
-    
+      canvas?.toBlob((blob: string) => { //canvas에 그려진 이미지를 기준으로 파일 객체 생성
+        var file = new File([blob], file_name + ".png", {type: "image/png"}) 
+        
         const message = {
           images: [
             {
@@ -201,7 +202,7 @@ const OcrParser = ({ type=0, isMask=true, setOcrResult, file, setFile, cv, small
               name: file['name'].split('.')[0] // file name
             }
           ],
-          requestId: 'sdf4124', // unique string
+          requestId: 'sdf4124', // 임의의 unique string
           timestamp: 0,
           version: 'V2'
         }
@@ -211,25 +212,25 @@ const OcrParser = ({ type=0, isMask=true, setOcrResult, file, setFile, cv, small
         formData.append('file', file)
         formData.append('message', JSON.stringify(message))
       
-        axios
+        axios //ocr api 호출
           .post(
-            '/custom/v1/25705/fbe7d4dadf6a508241cbfea087073df50d1c6ae735b81dd9ff85b327572db2d6/infer', // APIGW Invoke URL
+            `${BASE_OCR_URL}/custom/v1/25705/fbe7d4dadf6a508241cbfea087073df50d1c6ae735b81dd9ff85b327572db2d6/infer`, // BASE_OCR_URL = "https://6n1q18xmim.apigw.ntruss.com" ocr api 주소
             formData,
             {
               headers: {
-                'X-OCR-SECRET': 'RXhHUEVEZG9FcVB0V1hWS0pRbXJ2THVLc1ZzWElhZlE=', // Secret Key
+                'X-OCR-SECRET': '************************', // 네이버 클로바 secret key
                 ...formData.getHeaders ? formData.getHeaders() : { 
                   'Content-Type': 'multipart/form-data',
                   'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Credentials': 'true'
-                  },
+                },
               }
             }
           )
           .then(res => {
             if (res.status === 200) {
               console.log('requestWithFile response:', res.data)
-              drawBoxes(res.data, isMasked, indicator)
+              drawBoxes(res.data, isMasked, indicator) // res.data를 프론트로 넘겨주면 됨
             }
           })
           .catch(e => {

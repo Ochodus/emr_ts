@@ -3,7 +3,9 @@ import { DefaultInspection, inspectionContent } from "interfaces/inspectionType.
 
 export const auth = window.localStorage.getItem("persist:auth")
 export const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
-export const BASE_BACKEND_URL = ""
+export const BASE_BACKEND_URL = "http://166.104.185.199:8080"
+export const BASE_FILE_URL = "http://166.104.185.199:9000"
+export const BASE_OCR_URL = "https://6n1q18xmim.apigw.ntruss.com"
 
 type Uploadables = DefaultInspection<inspectionContent> | null
 

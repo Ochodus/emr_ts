@@ -4,7 +4,7 @@ import axios from "axios";
 import { useLocalTokenValidation } from "../../../../api/commons/auth";
 import { Box, Divider, FormControl, FormLabel, Select, Sheet, Typography, Option, Stack } from "@mui/joy";
 import { DefaultInspection, inspectionContent } from "../../../../interfaces/inspectionType.interface";
-import { BASE_BACKEND_URL } from "api/commons/request";
+import { BASE_BACKEND_URL, BASE_FILE_URL } from "api/commons/request";
 
 const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axiosMode: boolean }) => {
 	const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
@@ -173,7 +173,7 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 					console.log(selectedEnchiridion)
 					return (
 						<Stack key={index}>
-							<img style={{ width: '100%'}} src={url} alt=""></img>
+							<img style={{ width: '100%'}} src={`${BASE_FILE_URL}${url}`} alt=""></img>
 						</Stack>						
 					)
 				})}

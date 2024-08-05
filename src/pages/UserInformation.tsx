@@ -6,7 +6,7 @@ import { Button, Box, Card, CardActions, CardOverflow, Chip, Divider, FormContro
 import { updateDeepValue, validationCheck } from "../api/commons/utils";
 import { Delete, EditRounded, EmailRounded, InfoOutlined, Password, Visibility, VisibilityOff } from "@mui/icons-material";
 import axios from "axios";
-import { BASE_BACKEND_URL } from "api/commons/request";
+import { BASE_BACKEND_URL, BASE_FILE_URL } from "api/commons/request";
 
 export const initialUser: User = {
 	email: "",
@@ -180,7 +180,7 @@ const UserInformation = ({axiosMode}: {axiosMode: boolean}) => {
 										<Avatar
 											variant="outlined"
 											size="sm"
-											src={newProfileUrl !=="" ? newProfileUrl : currentUser.profile_url !== "" ? currentUser.profile_url : undefined}
+											src={`${BASE_FILE_URL}${newProfileUrl !=="" ? newProfileUrl : currentUser.profile_url !== "" ? currentUser.profile_url : undefined}`}
 											onClick={() => navigate('/user-info')}
 										/>                  
 									</AspectRatio>                

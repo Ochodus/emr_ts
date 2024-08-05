@@ -7,7 +7,7 @@ import { closeSidebar } from '../../api/commons/utils';
 import { Patient, User } from '../../interfaces';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { BASE_BACKEND_URL } from 'api/commons/request';
+import { BASE_BACKEND_URL, BASE_FILE_URL } from 'api/commons/request';
 
 function Toggler({
     defaultExpanded = false,
@@ -243,7 +243,7 @@ const SideBarMui = ({ curPatient, setSubPage }: { curPatient: Patient & {id: num
                     <Avatar
                         variant="outlined"
                         size="sm"
-                        src={currentUser?.profile_url}
+                        src={`${BASE_FILE_URL}${currentUser?.profile_url}`}
                     />
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography level="title-sm">{`${currentUser?.last_name}${currentUser?.first_name}`}</Typography>

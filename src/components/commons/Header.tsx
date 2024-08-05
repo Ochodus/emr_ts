@@ -5,7 +5,7 @@ import { useLocalTokenValidation } from "api/commons/auth";
 import { LogoutRounded } from "@mui/icons-material";
 import { User } from "interfaces";
 import axios from "axios";
-import { BASE_BACKEND_URL } from "api/commons/request";
+import { BASE_BACKEND_URL, BASE_FILE_URL } from "api/commons/request";
 import { changeAuth } from "reducers/auth";
 import { useDispatch } from "react-redux";
 
@@ -99,7 +99,7 @@ const HeaderMain = () => {
                         <Avatar
                             variant="outlined"
                             size="sm"
-                            src={currentUser?.profile_url}
+                            src={`${BASE_FILE_URL}${currentUser?.profile_url}`}
                             onClick={() => navigate('/user-info')}
                         />
                         <Box sx={{ minWidth: 0, flex: 1 }}>

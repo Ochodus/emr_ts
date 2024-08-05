@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { BASE_BACKEND_URL } from "./request";
 
 
 export const useLocalTokenValidation = () => {
@@ -23,7 +24,7 @@ export const useLocalTokenValidation = () => {
         };
         try {
             await axios.get(
-                `/api/users`,
+                `${BASE_BACKEND_URL}/api/users`,
                 config
             );
 
