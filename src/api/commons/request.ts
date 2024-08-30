@@ -3,9 +3,9 @@ import { DefaultInspection, inspectionContent } from "interfaces/inspectionType.
 
 export const auth = window.localStorage.getItem("persist:auth")
 export const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
-export const BASE_BACKEND_URL = "http://166.104.185.199:8080"
-export const BASE_FILE_URL = "http://166.104.185.199:9000"
-export const BASE_OCR_URL = "https://6n1q18xmim.apigw.ntruss.com"
+export const BASE_BACKEND_URL = process.env.NODE_ENV === 'development' ? "" : "http://166.104.185.199:8080"
+export const BASE_FILE_URL = process.env.NODE_ENV === 'development' ? "" : "http://166.104.185.199:9000"
+export const BASE_OCR_URL = process.env.NODE_ENV === 'development' ? "" : "https://6n1q18xmim.apigw.ntruss.com"
 
 type Uploadables = DefaultInspection<inspectionContent> | null
 
@@ -49,9 +49,11 @@ export const uploadData = async (
     try {
         isNew ? await axios.post(url, data, config) : await axios.patch(`${url}/${id}`, data, config)
         console.log(`${name} 검사 기록 ${isNew ? "추가" : "편집"} 성공 : \n\n${JSON.stringify(data)}`) 
-        handleClose()              
+        handleClose()
+        return true          
     } catch (error) {
         console.error(`${name} 검사 기록 ${isNew ? "추가" : "편집"} 중 오류 발생: `, error)
+        return false
     }
 }
 

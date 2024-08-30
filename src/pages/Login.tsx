@@ -2,9 +2,11 @@ import { useState, useEffect, ChangeEvent } from "react";
 import { useDispatch, useSelector } from 'react-redux';
 import { changeAuth } from '../reducers/auth';
 import { useLocalTokenValidation } from "api/commons/auth";
-import axios from "axios";
-import { Box, CssBaseline, CssVarsProvider, GlobalStyles, IconButton, Stack, Typography, Link, Button, FormControl, FormLabel, Input, Checkbox } from "@mui/joy";
+import axios, { AxiosError } from "axios";
+import { Box, CssBaseline, CssVarsProvider, GlobalStyles, IconButton, Stack, Typography, Link, Button, FormControl, FormLabel, Input, Checkbox, FormHelperText } from "@mui/joy";
 import { BASE_BACKEND_URL } from "api/commons/request";
+import { validationCheck } from "api/commons/utils";
+import { InfoOutlined } from "@mui/icons-material";
 
 const Login = ({axiosMode}: {axiosMode: boolean}) => {
 	const checkAuth = useLocalTokenValidation() // localStorage의 로그인 정보 유효성 검사
@@ -17,6 +19,8 @@ const Login = ({axiosMode}: {axiosMode: boolean}) => {
 
 	const [isFormValid, setIsFormValid] = useState({ email: false, passw: false}) // input 필드 값의 유효성
 	const [isTriedToLogin, setIsTriedToLogin] = useState(false) // 단일 세션에서 로그인 시도 여부 저장 (폼 유효성 검사 후 메시지 출력을 위한 변수)
+
+	const [toggleInactiveMsg, setToggleInactiveMsg] = useState(false)
 
 	const handleInputChange = (event: ChangeEvent<HTMLInputElement>, stateUpdater: Function) => {
 		stateUpdater(event.target.value);
@@ -36,10 +40,9 @@ const Login = ({axiosMode}: {axiosMode: boolean}) => {
 	} // Input 필드의 유효성 여부 검사
 
 	const handleLoginClick = async () => {
-		setIsTriedToLogin(true);
-
 		if (!formValidationCheck())  {
-			alert("이메일 및 비밀번호 형식이 맞지 않습니다.")
+			setToggleInactiveMsg(false);
+			setIsTriedToLogin(true);
 			return
 		}
 
@@ -61,8 +64,9 @@ const Login = ({axiosMode}: {axiosMode: boolean}) => {
 			const token = response.data; // 응답에서 액세스 토큰 가져오기
 			// 액세스 토큰을 상태로 저장
 			dispatch(changeAuth({email: email, token: token.access_token}))
-			alert("로그인 성공!");
 		} catch (error) {
+			if ((error as AxiosError<{code: string}, any>).response?.data.code === "INACTIVE_USER") {setIsTriedToLogin(false); setToggleInactiveMsg(true)}
+			else {setToggleInactiveMsg(false); setIsTriedToLogin(true); alert('로그인 실패. 잠시 후 다시 시도해 주세요.')}
 			console.error("로그인 중 오류 발생:", error);
 		}
 	} // 백엔드 로그인 api 호출
@@ -171,18 +175,34 @@ const Login = ({axiosMode}: {axiosMode: boolean}) => {
 						value={email}
 						onChange={(event: ChangeEvent<HTMLInputElement>) => handleInputChange(event, setEmail)}
 						onKeyDown={(e) => handleKeyPress(e)}
-					/>
+					/> 
 					</FormControl>
-					<FormControl error={isTriedToLogin && passw === ""}  required>
-					<FormLabel>비밀번호</FormLabel>
-					<Input 
-						type="password" 
-						name="password" 
-						value={passw}
-						onChange={(event: ChangeEvent<HTMLInputElement>) => handleInputChange(event, setPassw)}
-						onKeyDown={(e) => handleKeyPress(e)}
-					/>
+					<FormControl error={isTriedToLogin && passw === ""} required>
+						<FormLabel>비밀번호</FormLabel>
+						<Input 
+							type="password" 
+							name="password" 
+							value={passw}
+							onChange={(event: ChangeEvent<HTMLInputElement>) => handleInputChange(event, setPassw)}
+							onKeyDown={(e) => handleKeyPress(e)}
+						/>
 					</FormControl>
+					{(!validationCheck(passw) || !validationCheck(email)) && isTriedToLogin && 
+					<FormControl error={(!validationCheck(passw) || !validationCheck(email)) && isTriedToLogin} required>						
+						<FormHelperText>
+							<InfoOutlined />
+							{!validationCheck(email) ? '이메일을 입력해 주세요.': '비밀번호를 입력해 주세요.'}
+						</FormHelperText>
+					</FormControl>
+					}
+					{toggleInactiveMsg &&
+					<FormControl error={toggleInactiveMsg} required>						
+						<FormHelperText>
+							<InfoOutlined />
+							가입이 승인되지 않았습니다. 관리자에게 문의해 주세요.
+						</FormHelperText>
+					</FormControl>
+					}
 					<Stack gap={4} sx={{ mt: 2 }}>
 					<Box
 						sx={{

@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Box, Divider, IconButton, Sheet, Typography, Button, FormControl, FormLabel, Textarea, Stack } from '@mui/joy'
-import { AttachFile, Close } from '@mui/icons-material'
+import { Close } from '@mui/icons-material'
 import { DateTimePicker, LocalizationProvider, renderTimeViewClock } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
@@ -12,7 +12,7 @@ import { FormAccordion, FormAccordionDetails, FormAccordionHeader, FormAccordion
 import { DefaultInspection, inspectionContent } from 'interfaces/inspectionType.interface';
 import OcrParser from 'components/commons/OcrParser';
 import { BASE_BACKEND_URL, uploadData, uploadFiles } from 'api/commons/request';
-import { MuiFileInput } from 'mui-file-input';
+import { CustomSnackbar } from 'components/commons'
 
 dayjs.extend(isLeapYear)
 dayjs.extend(utc)
@@ -27,9 +27,12 @@ export interface DefaultFormProps<T extends inspectionContent> {
     fileInputNumber?: number,
     fileInputLabel?: string[],
     selectedForm?: DefaultInspection<T> & {id: number} | null,
+    ocrIndex?: number[],
+    video?: boolean,
     handleEditorVisible: (flag: boolean, index?: number) => void, 
     cv?: any,
     children?: React.ReactNode
+    multiple?: boolean
 }
 
 const DefaultForm = <T extends inspectionContent>({
@@ -41,9 +44,12 @@ const DefaultForm = <T extends inspectionContent>({
     useOcr=false,
     fileInputNumber=1,
     fileInputLabel,
+    ocrIndex=[0],
+    video=false,
     handleEditorVisible,
     cv=null,
-    children=null
+    children=null,
+    multiple=false
 }: DefaultFormProps<T>) => {
     const { patient_id } = useParams();
     const auth = window.localStorage.getItem("persist:auth")
@@ -67,14 +73,27 @@ const DefaultForm = <T extends inspectionContent>({
     const [submitted, setSubmitted] = useState<boolean>(false)
     const [contentValidation, setContentValidation] = useState<boolean>(true)
 
+    const [snackbarShow, setSnackbarShow] = useState<boolean>(false)
+    const [snackbarType, setSnackbarType] = useState<"danger" | "success">("success")
+    const [snackbarMsg, setSnackbarMsg] = useState("")
+
+    const resetForm = useCallback(() => {
+        setFiles(Array.from({length: fileInputNumber}, () => null))
+        setContent(null)
+        setNote("")
+        setExDate(dayjs())
+    }, [fileInputNumber])
+
     const addNewInspection = async () => {
-        console.log(contentValidation)
         if (!contentValidation) {
+            setSnackbarType("danger")
+            setSnackbarMsg(`유효하지 않은 입력값이 있습니다.`)
+            setSnackbarShow(true)
             setSubmitted(true)
             return
         }
         
-        await uploadFiles(selectedForm, files, label, config, filesChanged).then((file_urls: string[]) => { 
+        await uploadFiles(selectedForm, files, label, config, filesChanged).then(async (file_urls: string[]) => {
             const newInspection = {
                 file_urls: file_urls,
                 inspected: exDate.format(),
@@ -82,7 +101,19 @@ const DefaultForm = <T extends inspectionContent>({
                 detail: note
             } as DefaultInspection<inspectionContent>
 
-            uploadData(isNew, url, newInspection, label, config, () => handleEditorVisible(false, selectedForm?.id), selectedForm?.id)
+            let result = await uploadData(isNew, url, newInspection, label, config, () => handleEditorVisible(false, selectedForm?.id), selectedForm?.id)
+
+            if (result) {
+                setSnackbarType("success")
+                setSnackbarMsg(`${label} 기록을 ${isNew ? "추가" : "편집"}하였습니다.`)
+                setSnackbarShow(true)
+                resetForm()
+            }
+            else {
+                setSnackbarType("danger")
+                setSnackbarMsg(`${label} 기록을 ${isNew ? "추가" : "편집"}할 수 없습니다.`)
+                setSnackbarShow(true) 
+            }
         })
 
         setSubmitted(false)
@@ -100,12 +131,9 @@ const DefaultForm = <T extends inspectionContent>({
             setContent(selectedForm.content)
         }
         if (isNew) {
-            setFiles(Array.from({length: fileInputNumber}, () => null))
-            setExDate(dayjs())
-            setNote("")
-            setContent(null)
+            resetForm()
         }
-    }, [isNew, selectedForm, fileInputNumber])
+    }, [isNew, selectedForm, fileInputNumber, resetForm])
 
     return (
         <Sheet
@@ -171,48 +199,22 @@ const DefaultForm = <T extends inspectionContent>({
                         <FormAccordionHeader>파일 업로드</FormAccordionHeader>
                     </FormAccordionSummary>
                     <FormAccordionDetails>
-                        {useOcr 
-                        ? <React.Fragment>
+                        <Stack gap={4}>
                             {files.map((file, index) => (
-                                <Stack key={index}>
-                                    <OcrParser 
-                                        type={0}
-                                        isMask={false}
-                                        setOcrResult={(result: object) => setOcrResults([...ocrResults.slice(0, index), result, ...ocrResults.slice(index+1)])}
-                                        file={file}
-                                        setFile={(file: File | null) => handleFileChange(file, index)}
-                                        smallSize={false}
-                                        cv={cv}
-                                        indicator={0}
-                                        label={fileInputLabel ? fileInputLabel[index] : undefined}
-                                        index={index}                        
-                                    />
-                                </Stack>
+                                <OcrParser 
+                                    key={index}
+                                    setOcrResult={(result: object) => setOcrResults([...ocrResults.slice(0, index), result, ...ocrResults.slice(index+1)])}
+                                    file={file}
+                                    setFile={(file: File | null) => handleFileChange(file, index)}
+                                    cv={cv}
+                                    label={fileInputLabel ? fileInputLabel[index] : undefined}
+                                    index={ocrIndex[index]}    
+                                    useOcr={useOcr}
+                                    multiple={multiple}
+                                    video={video}             
+                                />
                             ))}                            
-                        </React.Fragment> : 
-                        <React.Fragment>
-                            {files.map((file, index) => (
-                                <Stack key={index}>
-                                    <Typography>{fileInputLabel ? fileInputLabel[index] : null}</Typography>
-                                    <MuiFileInput
-                                        value={file}
-                                        onChange={(file) => handleFileChange(file, index)}
-                                        InputProps={{
-                                            inputProps: { 
-                                                accept: '.png, .jpeg, .jpg, .pdf'
-                                            },
-                                            startAdornment: <AttachFile />
-                                        }}
-                                        clearIconButtonProps={{
-                                            title: "Remove",
-                                            children: <Close fontSize="small" />,
-                                        }}
-                                        label={'파일 선택'}
-                                        style={{ padding: 'auto', margin: '10px' }}                                        
-                                    />
-                                </Stack>
-                            ))}                            
-                        </React.Fragment> }
+                        </Stack>
                     </FormAccordionDetails>
                 </FormAccordion>
                 {children ? React.cloneElement(children as React.ReactElement, {content, ocrResults, submitted, setContent, setContentValidation, setExDate}) : null}
@@ -258,6 +260,14 @@ const DefaultForm = <T extends inspectionContent>({
                     </FormAccordionDetails>
                 </FormAccordion>
             </Box>
+            <CustomSnackbar
+                open={snackbarShow}
+                snackbarMsg={snackbarMsg}
+                color={snackbarType}
+                onClose={() => {
+                    setSnackbarShow(false);
+                }}
+            />
             <Button variant='soft' onClick={addNewInspection} sx={{ width: '50%', margin: '10px auto' }}>
                 {isNew ? "추가": "변경"}
             </Button>

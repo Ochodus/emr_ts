@@ -1,9 +1,9 @@
 import { useState } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
 import { Box, Card, CardActions, CardOverflow, Divider, FormControl, FormLabel, IconButton, Input, Select, Stack, Typography, Option, Button, Chip, Sheet, FormHelperText } from "@mui/joy";
 import { EmailRounded, InfoOutlined, Password, Visibility, VisibilityOff } from "@mui/icons-material";
-import { validationCheck } from "api/commons/utils";
+import { preventAllNonDigit, validationCheck } from "api/commons/utils";
 import { BASE_BACKEND_URL } from "api/commons/request";
 
 const SignUp = () => {
@@ -19,13 +19,15 @@ const SignUp = () => {
 	const [selectedPosition, setSelectedPosition] = useState("원장")
 	const [selectedDepartment, setSelectedDepartment] = useState("통증")
 
+  const [toggleInuseEmail, setToggleInuseEmail] = useState(false)
+
 	const [submitted, setSubmitted] = useState(false) // 회원 가입 시도 여부
 
   const handleRegistrationClick = () => {
     setSubmitted(true)
+    setToggleInuseEmail(false)
 
     if (!formValidationCheck()) {
-      alert("유효하지 않은 입력 필드가 있습니다.")
       return
     }
 
@@ -40,7 +42,11 @@ const SignUp = () => {
 		let passwCheck = passw !== ""
 		let passwCCheck = passw === passwC
 
-		return nameCheck && phoneNCheck && emailCheck && passwCheck && passwCCheck
+		return nameCheck && phoneNCheck && emailCheck && passwCheck && passwCCheck && validationCheck(email, false, (value: string) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      return emailRegex.test(value)
+    }) && validationCheck(phoneN[0], false, (value: string) => { return /^\d{4}$/.test(value) })
+    && validationCheck(phoneN[1], false, (value: string) => { return /^\d{4}$/.test(value) })
 	} // 회원 가입 폼 유효성 검사
 
   const post_signup = async () => {
@@ -63,10 +69,10 @@ const SignUp = () => {
 		const token = response.data
 
 		console.log("성공 - 액세스 토큰:", token)
-		alert("회원가입 성공!");
 		navigate('/login');
 		} catch (error) {
-			console.error("회원 가입 중 오류 발생:", error)
+      if ((error as AxiosError<{code: string}, any>).response?.data.code === "ALREADY_EXISTENT_OBJECT") {setToggleInuseEmail(true); alert('이미 가입된 이메일입니다.')}
+      else {console.error("회원 가입 중 오류 발생:", error); alert('회원가입 실패. 잠시 후 다시 시도해 주세요.')}      
 		}
 	} // 회원 가입 벡앤드 요청
 
@@ -111,44 +117,39 @@ const SignUp = () => {
               sx={{ display: { xs: 'flex', md: 'flex', lg: 'flex' }, my: 1 }}
             >
               <Stack spacing={2} sx={{ flexGrow: 1 }}>
-                <Stack spacing={1} direction={{ xs: 'column', lg: 'row'}}>                  
-                  <FormControl sx={{ flexGrow: 1 }} error={!validationCheck(lastName) && submitted}>
-                    <FormLabel>이름</FormLabel>
-                    <Input 
-                      size="sm" 
-                      placeholder="성"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      sx={{
-                        backgroundColor: '#ffffff'
-                      }}
-                    />
-                    {!validationCheck(lastName) && submitted && 
-                      <FormHelperText>
-                        <InfoOutlined />
-                        필수 입력란입니다.
-                      </FormHelperText>                            
-                    }     
-                  </FormControl>                  
-                  <FormControl sx={{ flexGrow: 1 }} error={!validationCheck(firstName) && submitted}>
-                    <FormLabel sx={{ display: { xs: 'none', md: 'none', lg: 'block'} }}><br></br></FormLabel>
-                    <Input 
-                      size="sm" 
-                      placeholder="이름" 
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      sx={{
-                        backgroundColor: '#ffffff'
-                      }}
-                    />
-                    {!validationCheck(firstName) && submitted && 
-                      <FormHelperText>
-                        <InfoOutlined />
-                        필수 입력란입니다.
-                      </FormHelperText>                            
-                    }   
-                  </FormControl>
-                </Stack>
+                <FormControl error={(!validationCheck(lastName) || !validationCheck(firstName)) && submitted}>
+                  <FormLabel>이름</FormLabel>
+                  <Stack spacing={1} direction={{ xs: 'column', lg: 'row'}}>                  
+                    <FormControl sx={{ flexGrow: 1 }} error={!validationCheck(lastName) && submitted}>                      
+                      <Input 
+                        size="sm" 
+                        placeholder="성"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        sx={{
+                          backgroundColor: '#ffffff'
+                        }}
+                      />   
+                    </FormControl>                  
+                    <FormControl sx={{ flexGrow: 1 }} error={!validationCheck(firstName) && submitted}>
+                      <Input 
+                        size="sm" 
+                        placeholder="이름" 
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        sx={{
+                          backgroundColor: '#ffffff'
+                        }}
+                      />
+                    </FormControl>
+                  </Stack>
+                  {(!validationCheck(lastName) || !validationCheck(firstName)) && submitted && 
+                    <FormHelperText>
+                      <InfoOutlined />
+                      이름을 입력해 주세요.
+                    </FormHelperText>                            
+                  }  
+                </FormControl>
                 <Divider/>
                 <Stack direction={{ xs: 'column', lg: 'row'}} spacing={2}>
                   <FormControl sx={{ flexGrow: 1 }}>
@@ -202,61 +203,74 @@ const SignUp = () => {
                 </Stack>
                 <Divider/>
                 <Stack direction={{ xs: 'column', lg: 'row'}} spacing={2}>
-                  <Stack  direction={{ xs: 'column', md:'row', lg: 'row'}} spacing={1}>
-                    <FormControl sx={{ flexGrow: 1 }}>
-                      <FormLabel>전화번호</FormLabel>
-                      <Input
-                        size="sm"
-                        type="number"
-                        value={'010'}
-                        placeholder=""
-                        disabled={true}
-                        sx={{
-                          backgroundColor: '#ffffff'
-                        }}
-                      />
-                    </FormControl>
-                    <FormControl error={!validationCheck(phoneN[0]) && submitted} sx={{ flexGrow: 1 }}>
-                      <FormLabel sx={{ display: { xs: 'none', md: 'block'} }}><br/></FormLabel>
-                      <Input
-                        size="sm"
-                        type="number"
-                        value={phoneN[0]}
-                        onChange={(e) => setPhoneN([e.target.value, phoneN[1]])}
-                        placeholder=""
-                        sx={{
-                          backgroundColor: '#ffffff'
-                        }}
-                      />
-                      {!validationCheck(phoneN[0]) && submitted && 
-                        <FormHelperText>
-                          <InfoOutlined />
-                          필수 입력란입니다.
-                        </FormHelperText>                            
-                      } 
-                    </FormControl>
-                    <FormControl error={!validationCheck(phoneN[1]) && submitted} sx={{ flexGrow: 1 }}>
-                      <FormLabel sx={{ display: { xs: 'none', md: 'block'} }}><br/></FormLabel>
-                      <Input
-                        size="sm"
-                        type="number"
-                        value={phoneN[1]}
-                        onChange={(e) => setPhoneN([phoneN[0], e.target.value])}
-                        placeholder=""
-                        sx={{
-                          backgroundColor: '#ffffff'
-                        }}
-                      />
-                      {!validationCheck(phoneN[1]) && submitted && 
-                        <FormHelperText>
-                          <InfoOutlined />
-                          필수 입력란입니다.
-                        </FormHelperText>                            
-                      }
-                    </FormControl>                    
-                  </Stack>
+                  <FormControl error={(!validationCheck(phoneN[0], false, (value: string) => { return /^\d{4}$/.test(value) }) || 
+                    !validationCheck(phoneN[1], false, (value: string) => { return /^\d{4}$/.test(value) })) && submitted}>
+                    <FormLabel>전화번호</FormLabel>
+                    <Stack  direction={{ xs: 'column', md:'row', lg: 'row'}} spacing={1}>
+                      <FormControl sx={{ flexGrow: 1 }}>                        
+                        <Input
+                          size="sm"
+                          type="number"
+                          value={'010'}
+                          placeholder=""
+                          disabled={true}
+                          sx={{
+                            backgroundColor: '#ffffff'
+                          }}
+                        />                      
+                      </FormControl>
+                      <FormControl error={!validationCheck(phoneN[0], false, (value: string) => { return /^\d{4}$/.test(value) }) && submitted} sx={{ flexGrow: 1 }}>
+                        <Input
+                          size="sm"
+                          type="number"
+                          value={phoneN[0]}
+                          onChange={(e) => {
+                            let value = e.target.value
+                            if (value.length > 4) {value = value.slice(0, 4)}
+                            setPhoneN([value, phoneN[1]])
+                          }}
+                          onKeyDown={preventAllNonDigit}
+                          placeholder=""
+                          sx={{
+                            backgroundColor: '#ffffff'
+                          }}
+                        />
+                      </FormControl>
+                      <FormControl error={!validationCheck(phoneN[1], false, (value: string) => { return /^\d{4}$/.test(value) }) && submitted} sx={{ flexGrow: 1 }}>
+                        <Input
+                          size="sm"
+                          type="number"
+                          value={phoneN[1]}
+                          onChange={(e) => {
+                            let value = e.target.value
+                            if (value.length > 4) {value = value.slice(0, 4)}
+                            setPhoneN([phoneN[0], value])                          
+                          }}
+                          onKeyDown={preventAllNonDigit}
+                          placeholder=""
+                          sx={{
+                            backgroundColor: '#ffffff'
+                          }}
+                        />
+                      </FormControl>
+                    </Stack>
+                    {(!validationCheck(phoneN[0], false, (value: string) => { return /^\d{4}$/.test(value) }) || 
+                    !validationCheck(phoneN[1], false, (value: string) => { return /^\d{4}$/.test(value) })) && 
+                    submitted && 
+                      <FormHelperText>
+                        <InfoOutlined />
+                        {'휴대전화번호가 정확한지 확인해 주세요.'}
+                      </FormHelperText>                            
+                    }
+                  </FormControl>                  
                   <Divider/>
-                  <FormControl sx={{ flexGrow: 1 }} error={!validationCheck(email) && submitted}>
+                  <FormControl 
+                    sx={{ flexGrow: 1 }} 
+                    error={(!!toggleInuseEmail || !validationCheck(email, false, (value: string) => {
+                      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                      return emailRegex.test(value)
+                    })) && submitted}
+                  >
                     <FormLabel>이메일</FormLabel>
                     <Input
                       size="sm"
@@ -267,11 +281,14 @@ const SignUp = () => {
                       placeholder="example@example.com"
                       sx={{ backgroundColor: '#ffffff' }}                      
                     />
-                    {!validationCheck(email) && submitted && 
+                    {(!!toggleInuseEmail || !validationCheck(email, false, (value: string) => {
+                      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                      return emailRegex.test(value)
+                    })) && submitted && 
                       <FormHelperText>
                         <InfoOutlined />
-                        필수 입력란입니다.
-                      </FormHelperText>                            
+                        {toggleInuseEmail ? "이미 사용 중인 이메일입니다." : email === "" ? '필수 입력란입니다.' : '이메일 형식을 확인해주세요'}
+                      </FormHelperText>
                     }
                   </FormControl>                  
                 </Stack>

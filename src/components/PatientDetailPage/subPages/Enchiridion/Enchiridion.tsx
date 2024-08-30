@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams } from 'react-router-dom';
 import axios from "axios";
 import { useLocalTokenValidation } from "../../../../api/commons/auth";
 import { Box, Divider, FormControl, FormLabel, Select, Sheet, Typography, Option, Stack } from "@mui/joy";
 import { DefaultInspection, inspectionContent } from "../../../../interfaces/inspectionType.interface";
-import { BASE_BACKEND_URL, BASE_FILE_URL } from "api/commons/request";
+import { BASE_BACKEND_URL } from "api/commons/request";
+import PdfCarousel from "components/commons/PdfCarousel";
 
 const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axiosMode: boolean }) => {
 	const checkAuth = useLocalTokenValidation() // localStorage 저장 토큰 정보 검증 함수
@@ -25,6 +26,13 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 	const [enchiridionType, setEnchiridionType] = useState<string>("")
 	const [selectedEnchiridion, setSelectedEnchiridion] = useState<DefaultInspection<inspectionContent> | null>(null)
 	const [enchiridionList, setEnchiridionList] = useState<DefaultInspection<inspectionContent>[]>([])
+
+	const [pageCount, setPageCount] = useState<number>(0)
+
+    const canvasRefs = useRef<HTMLCanvasElement[]>([]);
+    const containerRefs = useRef<HTMLDivElement>(null);
+    const [canvasOffset, setCanvasOffset] = useState(0)
+    const hasRendering = useRef(false)
 	
 	const enchiridionTypeList = ["IMOOVE", "X-Ray", "InBody", "Exbody", "Lookin' Body", "혈액 검사 결과", "설문지", "족저경", "운동능력 검사", "정렬 사진", "평지 보행 동영상"]
 
@@ -41,8 +49,8 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
                     enchiridionType === "설문지" ? "SURVEY" :
                     enchiridionType === "족저경" ? "PODOSCOPE" :
                     enchiridionType === "운동능력 검사" ? "PHYSICAL_PERFORMANCE" :
-                    enchiridionType === "정렬 사진" ? "" : 
-                    enchiridionType === "평지 보행 동영상" ? "" :
+                    enchiridionType === "정렬 사진" ? "ALIGNMENT" : 
+                    enchiridionType === "평지 보행 동영상" ? "FOOTPATH" :
                     ""
                 }
             `,
@@ -55,6 +63,34 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 		}
 	}, [enchiridionType, config, url])
 
+	const extractFileName = (url: string): string => {
+        // URL에서 파일 이름 추출
+        const segments = url.split('/');
+        return segments[segments.length - 1] || 'download';
+    };
+
+	const downloadFile = async (url: string) => {
+        try {
+          const response = await fetch(url);
+    
+          if (!response.ok) {
+            throw new Error('Failed to fetch the file');
+          }
+    
+          const blob = await response.blob();
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = extractFileName(url);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(downloadUrl);
+        } catch (err) {
+        } finally {
+        }
+    };
+
 	useEffect(() => {
 		setSelectedEnchiridion(null)
 		
@@ -63,17 +99,21 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 		getSelectedEnchiridionList().then((result) => {
 			setEnchiridionList(result)
 		})
-		
 	}, [enchiridionType, getSelectedEnchiridionList])
 
 	useEffect(() => {
 		let testMode = true
 		if ((process.env.NODE_ENV !== 'development' || testMode) && axiosMode) checkAuth()
-	  }, [checkAuth, axiosMode]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
+	}, [checkAuth, axiosMode]) // 페이지 첫 렌더링 시 localStorage의 로그인 유효성 검사
+
+	useEffect(() => {
+		
+	})
 
 	return (
 		<Sheet
 			variant="outlined"
+			className="scrollable vertical"
 			sx={{
 				borderRadius: 'sm',
 				p: 1,
@@ -104,8 +144,7 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 				display: 'flex',
 				flexDirection: 'column',
 				justifyContent: 'center',
-				p: '0px 5px',
-				overflow: 'auto'
+				p: '0px 5px'
 			}}>
 				<Box
 					className="SearchAndFilters-tabletUp"
@@ -155,29 +194,29 @@ const Enchiridion = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, axi
 					</FormControl>
 				</Box>
 			</Box>
-			<Box sx={{ 
-				flex: '1 1 0',
-				overflow: 'auto',
-				'&::-webkit-scrollbar': {
-					width: '10px'  
-				},
-				'&::-webkit-scrollbar-thumb': {
-					background: 'rgba(110, 162, 213)',
-					borderRadius: '10px'
-				},
-				'&::-webkit-scrollbar-track': {
-					background: 'rgba(110, 162, 213, .1)'
-				}
-			}}>
+			<Stack 
+				className='overflow vertical'
+				direction='column'
+			>				
 				{selectedEnchiridion?.file_urls.map((url, index) => {
-					console.log(selectedEnchiridion)
-					return (
-						<Stack key={index}>
-							<img style={{ width: '100%'}} src={`${BASE_FILE_URL}${url}`} alt=""></img>
-						</Stack>						
+					return(
+						<PdfCarousel
+							key={index}
+							url={url}
+							pageCount={pageCount}
+							canvasRefs={canvasRefs}
+							containerRefs={containerRefs}
+							canvasOffset={canvasOffset}
+							hasRendering={hasRendering}
+							video={enchiridionType === "평지 보행 동영상" ? true : false}
+							tooltipMsg="클릭하여 다운로드"
+							onClick={() => downloadFile(url)}
+							setPageCount={setPageCount}
+							setCanvasOffset={setCanvasOffset}
+						/>
 					)
 				})}
-			</Box>
+			</Stack>
 		</Sheet>
 	)
 }

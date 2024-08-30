@@ -217,6 +217,9 @@ export const TableMui = <T extends ID>({
 								<td key={index} style={{ 
 									backgroundColor: "#ffffff",
 									textAlign: 'center',
+									whiteSpace: 'nowrap',
+									overflow: 'hidden',
+									textOverflow: 'ellipsis'
 								}}> 
 									{
 										isHeadCellWithSingleId(headCell) ? (

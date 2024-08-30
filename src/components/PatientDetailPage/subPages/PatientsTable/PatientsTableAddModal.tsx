@@ -7,10 +7,11 @@ import isLeapYear from 'dayjs/plugin/isLeapYear'
 import utc from "dayjs/plugin/utc"
 import 'dayjs/locale/ko'
 import { Box, Divider, FormControl, FormLabel, IconButton, Input, Select, Sheet, Typography, Option, Chip, Textarea, Stack, Button, Switch, RadioGroup, Radio, FormHelperText, Modal, ModalDialog, DialogContent, DialogTitle } from '@mui/joy'
-import { Add, Close, Delete, InfoOutlined } from '@mui/icons-material'
-import { updateDeepValue, validationCheck } from 'api/commons/utils'
+import { Add, Close, Delete } from '@mui/icons-material'
+import { preventAllNonDigit, preventExpression, updateDeepValue, validationCheck } from 'api/commons/utils'
 import { FormAccordion, FormAccordionDetails, FormAccordionHeader, FormAccordionSummary } from '../InspectionHistory/CustomTheme'
 import DaumPostcodeEmbed from 'react-daum-postcode'
+import { CustomSnackbar } from 'components/commons'
 
 dayjs.extend(isLeapYear)
 dayjs.extend(utc)
@@ -71,10 +72,50 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
     const [addressSearcherOpen, setAddressSearcherOpen] = useState<boolean>(false)
     const [targetNok, setTargetNok] = useState<number>()
     const [isSameAddress, setIsSameAddress] = useState<boolean[]>([])
+    const [toggleAddressInput, setToggleAddressInput] = useState(false)
+
+    const [snackbarShow, setSnackbarShow] = useState<boolean>(false)
+    const [snackbarType, setSnackbarType] = useState<"danger" | "success">("success")
+    const [snackbarMsg, setSnackbarMsg] = useState("")
 
     const handleAddPatient = async () => {
-
         setSubmitted(true)
+
+        if (!(
+            validationCheck(newPatient.first_name) &&
+            validationCheck(newPatient.last_name) &&
+            validationCheck(newPatient.birthday) &&
+            validationCheck(newPatient.address) &&
+            validationCheck(newPatient.post_number) &&
+            (!isNew || validationCheck(newPatient.regDate)) && 
+            validationCheck(newPatient.sex) &&
+            validationCheck(newPatient.social_number) &&
+            validationCheck(newPatient.tel) &&
+            newPatient.noks.map(nok => 
+                validationCheck(nok.address) && 
+                validationCheck(nok.birthday) && 
+                validationCheck(nok.first_name) && 
+                validationCheck(nok.last_name) &&
+                validationCheck(nok.post_number) &&
+                validationCheck(nok.relationship) &&
+                validationCheck(nok.sex) && 
+                validationCheck(nok.social_number) &&
+                validationCheck(nok.tel)
+            ).every(el => el) &&
+            (ommitPhysicalExam || !isNew || (
+                validationCheck(newPhysicalExam.height) &&
+                validationCheck(newPhysicalExam.weight) &&
+                validationCheck(newPhysicalExam.diastolic_blood_pressure) &&
+                validationCheck(newPhysicalExam.systolic_blood_pressure) &&
+                validationCheck(newPhysicalExam.body_temperature)
+            ))
+        )) {
+            setSnackbarType("danger")
+            setSnackbarMsg(`유효하지 않은 입력값이 있습니다.`)
+            setSnackbarShow(true)
+            setSubmitted(true)
+            return
+        }
 
         console.log(
             isNew ? "add" : ("edit - " + selectedPatient?.last_name),
@@ -85,12 +126,25 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
             if (!ommitPhysicalExam && isNew) {
                 addPhysicalExam(newPhysicalExam, id)
             }
+            setSnackbarType("success")
+            setSnackbarMsg(`환자를 ${isNew ? "추가" : "편집"}하였습니다.`)
+            setSnackbarShow(true)
+            flushForm()
         }
-        catch {
+        catch(error) {
+            setSnackbarType("danger")
+            setSnackbarMsg(`환자를 ${isNew ? "추가" : "편집"}할 수 없습니다.`)
+            setSnackbarShow(true) 
+            console.log(error)
+        }        
+    }
 
-        }
-        
-        handleClose(false)
+    const flushForm = () => {
+        setSubmitted(false)
+        setOmmitPhysicalExam(false)
+        setNewPatient(initialPatient)
+        setNewPhysicalExam(initialPhysicalExam)
+        setIsSameAddress([])
     }
 
     const handlePostCode = (data: any) => {
@@ -191,12 +245,6 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                     backgroundColor: '#ffffff'
                                                 }}
                                             />
-                                            {!validationCheck(newPatient?.last_name) && submitted && 
-                                                <FormHelperText>
-                                                    <InfoOutlined />
-                                                    필수 입력란입니다.
-                                                </FormHelperText>                            
-                                            }
                                         </FormControl>
                                         <FormControl size="md" error={!validationCheck(newPatient?.first_name) && submitted} sx={{ flex: "1 1 auto" }}>
                                             <FormLabel><br/></FormLabel>
@@ -209,12 +257,6 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                     backgroundColor: '#ffffff'
                                                 }}
                                             />
-                                            {!validationCheck(newPatient?.first_name) && submitted && 
-                                                <FormHelperText>
-                                                    <InfoOutlined />
-                                                    필수 입력란입니다.
-                                                </FormHelperText>                            
-                                            }
                                         </FormControl>
                                     </Stack>
                                     <FormControl size="md">
@@ -225,9 +267,9 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                             onChange={(e) => updateDeepValue(setNewPatient, ['sex'], e.target.value)}
                                             orientation='horizontal'
                                         >
-                                            <Radio value="0" label="남" variant="outlined" />
-                                            <Radio value="1" label="여" variant="outlined" />
-                                            <Radio value="2" label="기타" variant="outlined" />
+                                            <Radio value="0" label="남" variant="outlined" color={validationCheck(newPatient?.sex) || !submitted ? 'neutral' : 'danger'}/>
+                                            <Radio value="1" label="여" variant="outlined" color={validationCheck(newPatient?.sex) || !submitted ? 'neutral' : 'danger'} />
+                                            <Radio value="2" label="기타" variant="outlined" color={validationCheck(newPatient?.sex) || !submitted ? 'neutral' : 'danger'} />
                                         </RadioGroup>
                                     </FormControl>
                                 </Stack>
@@ -264,17 +306,16 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                 type="number"
                                                 placeholder=""
                                                 value={newPatient.social_number}
-                                                onChange={(e) => updateDeepValue(setNewPatient, ['social_number'], e.target.value)}
+                                                onChange={(e) => {
+                                                    let value = e.target.value
+                                                    if (value.length > 7) {value = value.slice(0, 7)}
+                                                    updateDeepValue(setNewPatient, ['social_number'], value)
+                                                }}
+                                                onKeyDown={preventAllNonDigit}
                                                 sx={{
                                                     backgroundColor: '#ffffff'
                                                 }}
-                                            />
-                                            {!validationCheck(newPatient.social_number) && submitted && 
-                                                <FormHelperText>
-                                                    <InfoOutlined />
-                                                    필수 입력란입니다.
-                                                </FormHelperText>                            
-                                            }   
+                                            /> 
                                         </FormControl>
                                     </Stack>
                                 </Stack>
@@ -286,9 +327,15 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                 type="number"
                                                 placeholder=""
                                                 value={`010`}
+                                                onChange={(e) => {
+                                                    let value = e.target.value
+                                                    if (value.length > 4) {value = value.slice(0, 4)}
+                                                    updateDeepValue(setNewPatient, ['social_number'], value)
+                                                }}
+                                                onKeyDown={preventAllNonDigit}
                                                 sx={{
                                                     backgroundColor: '#ffffff'
-                                                }}
+                                                }}                                                
                                                 disabled={true}
                                             />
                                         </FormControl>
@@ -297,169 +344,189 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                 type="number"
                                                 placeholder=""
                                                 value={newPatient.tel[0]}
-                                                onChange={(e) => updateDeepValue(setNewPatient, ['tel', 0], e.target.value)}
+                                                onChange={
+                                                    (e) => {
+                                                        let value = e.target.value
+                                                        if (value.length > 4) {value = value.slice(0, 4)}
+                                                        updateDeepValue(setNewPatient, ['tel', 0], value)
+                                                    }
+                                                }
+                                                onKeyDown={preventAllNonDigit}
                                                 sx={{
                                                     backgroundColor: '#ffffff'
                                                 }}
-                                            />
-                                            {!validationCheck(newPatient.tel[0]) && submitted && 
-                                                <FormHelperText>
-                                                    <InfoOutlined />
-                                                    필수 입력란입니다.
-                                                </FormHelperText>                            
-                                            }   
+                                            />  
                                         </FormControl>
                                         <FormControl size="md" error={!validationCheck(newPatient.tel[1]) && submitted} sx={{ justifyContent: "flex-end", flex: '1 1 auto' }}>
                                             <Input
                                                 type="number"
                                                 placeholder=""
                                                 value={newPatient.tel[1]}
-                                                onChange={(e) => updateDeepValue(setNewPatient, ['tel', 1], e.target.value)}
+                                                onChange={
+                                                    (e) => {
+                                                        let value = e.target.value
+                                                        if (value.length > 4) {value = value.slice(0, 4)}
+                                                        updateDeepValue(setNewPatient, ['tel', 1], value)
+                                                    }
+                                                }
+                                                onKeyDown={preventAllNonDigit}
                                                 sx={{
                                                     backgroundColor: '#ffffff'
                                                 }}
                                             />
-                                            {!validationCheck(newPatient.tel[1]) && submitted && 
-                                                <FormHelperText>
-                                                    <InfoOutlined />
-                                                    필수 입력란입니다.
-                                                </FormHelperText>                            
-                                            }   
                                         </FormControl>
                                     </Stack>
                                 </Stack>
                                 <Stack direction='row' gap={1} sx={{ py: 2, justifyContent: 'space-between', px: 10 }}>
-                                    <Stack gap={2} sx={{ flex: '1 1 auto' }}>
-                                        <Stack direction='row' gap={1}>
-                                            <FormControl size="md" sx={{ justifyContent: 'flex-end', flex: '1 1 auto' }}>
-                                                <FormLabel>주소 입력</FormLabel>
+                                    <FormControl sx={{ flex: '1 1 auto' }}>
+                                        <FormLabel sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                            주소 입력 
+                                            <FormControl orientation='horizontal'>
+                                                <FormLabel>직접 입력</FormLabel>
+                                                <Switch sx={{ float: 'right' }}                                                    
+                                                    checked={toggleAddressInput}
+                                                    onChange={() => setToggleAddressInput(!toggleAddressInput)}
+                                                />
+                                            </FormControl>
+                                        </FormLabel>
+                                        <Stack gap={2}>
+                                            <Stack direction='row' gap={1}>
+                                                <FormControl size="md" sx={{ flex: '1 1 auto' }}>                                                    
+                                                    <Input
+                                                        type="string"
+                                                        placeholder="주소"
+                                                        value={newPatient.address}
+                                                        onChange={(e) => updateDeepValue(setNewPatient, ['address'], e.target.value)}
+                                                        sx={{
+                                                            backgroundColor: '#ffffff'
+                                                        }}
+                                                        disabled={!toggleAddressInput}
+                                                    />
+                                                </FormControl>    
+                                                <FormControl size="md" error={!validationCheck(newPatient.post_number) && submitted}>
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="우편번호"
+                                                        value={newPatient.post_number}
+                                                        onChange={(e) => updateDeepValue(setNewPatient, ['post_number'], e.target.value)}
+                                                        sx={{
+                                                            backgroundColor: '#ffffff'
+                                                        }}
+                                                        disabled={!toggleAddressInput}
+                                                        onKeyDown={preventAllNonDigit}
+                                                    />
+                                                </FormControl>
+                                                <FormControl>
+                                                    <Button onClick={() => {setTargetNok(undefined); setAddressSearcherOpen(true)}}>
+                                                        우편번호 찾기
+                                                    </Button>
+                                                </FormControl>
+                                            </Stack>                                           
+                                            <FormControl size="md">
                                                 <Input
                                                     type="string"
-                                                    placeholder="주소"
-                                                    value={newPatient.address}
+                                                    placeholder="상세 주소"
+                                                    value={newPatient.address_detail}
+                                                    onChange={(e) => updateDeepValue(setNewPatient, ['address_detail'], e.target.value)}
                                                     sx={{
                                                         backgroundColor: '#ffffff'
                                                     }}
-                                                    disabled={true}
-                                                />
-                                            </FormControl>    
-                                            <FormControl size="md" error={!validationCheck(newPatient.post_number) && submitted} sx={{ justifyContent: "flex-end" }}>
-                                                <Input
-                                                    type="number"
-                                                    placeholder="우편번호"
-                                                    value={newPatient.post_number}
-                                                    onChange={(e) => updateDeepValue(setNewPatient, ['post_number'], e.target.value)}
-                                                    sx={{
-                                                        backgroundColor: '#ffffff'
-                                                    }}
-                                                    disabled={true}
-                                                />
-                                                {!validationCheck(newPatient.post_number) && submitted && 
-                                                    <FormHelperText>
-                                                        <InfoOutlined />
-                                                        필수 입력란입니다.
-                                                    </FormHelperText>                            
-                                                }   
+                                                />   
                                             </FormControl>
-                                            <FormControl sx={{ justifyContent: 'flex-end' }}>
-                                                <Button onClick={() => {setTargetNok(undefined); setAddressSearcherOpen(true)}}>
-                                                    우편번호 찾기
-                                                </Button>
-                                            </FormControl>
-                                        </Stack>                                           
-                                        <FormControl size="md" error={!validationCheck(newPatient.social_number) && submitted} sx={{ justifyContent: "flex-end" }}>
-                                            <Input
-                                                type="string"
-                                                placeholder="상세 주소"
-                                                value={newPatient.address_detail}
-                                                onChange={(e) => updateDeepValue(setNewPatient, ['address_detail'], e.target.value)}
-                                                sx={{
-                                                    backgroundColor: '#ffffff'
-                                                }}
-                                            />
-                                            {!validationCheck(newPatient.tel) && submitted && 
-                                                <FormHelperText>
-                                                    <InfoOutlined />
-                                                    필수 입력란입니다.
-                                                </FormHelperText>                            
-                                            }   
-                                        </FormControl>
-                                    </Stack>
+                                        </Stack>
+                                    </FormControl>
                                 </Stack>   
-                                <Stack direction='row' gap={1} sx={{ py: 2, justifyContent: 'space-between', px: 10, flexWrap: 'wrap' }}>
-                                    <FormControl size="md" sx={{ margin: 'auto 0' }}>
-                                        <FormLabel>생략</FormLabel>
-                                        <Switch
-                                            checked={!ommitPhysicalExam}
-                                            onChange={() => setOmmitPhysicalExam(!ommitPhysicalExam)}
-                                        />
+                                {isNew && <Stack direction='row' gap={1} sx={{ py: 2, justifyContent: 'space-between', px: 10, flexWrap: 'wrap' }}>
+                                    <FormControl sx={{ flex: '1' }}>
+                                        <FormLabel sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                            신체 검사
+                                            <FormControl size="md" orientation='horizontal'>
+                                                <FormLabel>입력</FormLabel>
+                                                <Switch
+                                                    checked={!ommitPhysicalExam}
+                                                    onChange={() => setOmmitPhysicalExam(!ommitPhysicalExam)}
+                                                />
+                                            </FormControl>
+                                        </FormLabel>
+                                        <Stack gap={2}>
+                                            <Stack direction='row' gap={1}>
+                                                <FormControl size="md" sx={{ flex: '1' }} error={!validationCheck(newPhysicalExam.height) && !ommitPhysicalExam && submitted}>
+                                                    <FormLabel>신장 (cm)</FormLabel>
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="신장"
+                                                        value={newPhysicalExam.height}
+                                                        onChange={(e) => updateDeepValue(setNewPhysicalExam, ['height'], e.target.value)}
+                                                        onKeyDown={preventExpression}
+                                                        disabled={ommitPhysicalExam}
+                                                        sx={{
+                                                            backgroundColor: '#ffffff'
+                                                        }}
+                                                    />
+                                                </FormControl>
+                                                <FormControl size="md" sx={{ flex: '1' }} error={!validationCheck(newPhysicalExam.weight) && !ommitPhysicalExam && submitted}>
+                                                    <FormLabel>몸무게 (kg)</FormLabel>
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="몸무게"
+                                                        value={newPhysicalExam.weight}
+                                                        onChange={(e) => updateDeepValue(setNewPhysicalExam, ['weight'], e.target.value)}
+                                                        disabled={ommitPhysicalExam}
+                                                        onKeyDown={preventExpression}
+                                                        sx={{
+                                                            backgroundColor: '#ffffff'
+                                                        }}
+                                                    />
+                                                </FormControl>
+                                                <FormControl size="md" sx={{ flex: '1' }} error={!validationCheck(newPhysicalExam.body_temperature) && !ommitPhysicalExam && submitted}>
+                                                    <FormLabel>체온 (℃)</FormLabel>
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="체온"
+                                                        value={newPhysicalExam.body_temperature}
+                                                        onChange={(e) => updateDeepValue(setNewPhysicalExam, ['body_temperature'], e.target.value)}
+                                                        disabled={ommitPhysicalExam}
+                                                        onKeyDown={preventExpression}
+                                                        sx={{
+                                                            backgroundColor: '#ffffff'
+                                                        }}
+                                                    />
+                                                </FormControl>
+                                            </Stack>
+                                            <FormControl>
+                                                <FormLabel>혈압</FormLabel>
+                                                <Stack direction='row' gap={1}>
+                                                    <FormControl size="md" sx={{ flex: '1' }} error={!validationCheck(newPhysicalExam.diastolic_blood_pressure) && !ommitPhysicalExam && submitted}>
+                                                        <Input
+                                                            type="number"
+                                                            placeholder="최저혈압"
+                                                            value={newPhysicalExam.diastolic_blood_pressure}
+                                                            onChange={(e) => updateDeepValue(setNewPhysicalExam, ['diastolic_blood_pressure'], e.target.value)}
+                                                            disabled={ommitPhysicalExam}
+                                                            onKeyDown={preventExpression}
+                                                            sx={{
+                                                                backgroundColor: '#ffffff'
+                                                            }}
+                                                        />
+                                                    </FormControl>
+                                                    <FormControl size="md" sx={{ flex: '1' }} error={!validationCheck(newPhysicalExam.systolic_blood_pressure) && !ommitPhysicalExam && submitted}>
+                                                        <Input
+                                                            type="number"
+                                                            placeholder="최고혈압"
+                                                            value={newPhysicalExam.systolic_blood_pressure}
+                                                            onChange={(e) => updateDeepValue(setNewPhysicalExam, ['systolic_blood_pressure'], e.target.value)}
+                                                            disabled={ommitPhysicalExam}
+                                                            onKeyDown={preventExpression}
+                                                            sx={{
+                                                                backgroundColor: '#ffffff'
+                                                            }}
+                                                        />
+                                                    </FormControl>       
+                                                </Stack>
+                                            </FormControl>  
+                                        </Stack>                                                                       
                                     </FormControl>
-                                    <FormControl size="md">
-                                        <FormLabel>신장 (cm)</FormLabel>
-                                        <Input
-                                            type="number"
-                                            placeholder="신장"
-                                            value={newPhysicalExam.height}
-                                            onChange={(e) => updateDeepValue(setNewPhysicalExam, ['height'], e.target.value)}
-                                            disabled={ommitPhysicalExam}
-                                            sx={{
-                                                backgroundColor: '#ffffff'
-                                            }}
-                                        />
-                                    </FormControl>
-                                    <FormControl size="md">
-                                        <FormLabel>몸무게 (kg)</FormLabel>
-                                        <Input
-                                            type="number"
-                                            placeholder="몸무게"
-                                            value={newPhysicalExam.weight}
-                                            onChange={(e) => updateDeepValue(setNewPhysicalExam, ['weight'], e.target.value)}
-                                            disabled={ommitPhysicalExam}
-                                            sx={{
-                                                backgroundColor: '#ffffff'
-                                            }}
-                                        />
-                                    </FormControl>
-                                    <FormControl size="md">
-                                        <FormLabel>최저 혈압</FormLabel>
-                                        <Input
-                                            type="number"
-                                            placeholder="최저혈압"
-                                            value={newPhysicalExam.diastolic_blood_pressure}
-                                            onChange={(e) => updateDeepValue(setNewPhysicalExam, ['diastolic_blood_pressure'], e.target.value)}
-                                            disabled={ommitPhysicalExam}
-                                            sx={{
-                                                backgroundColor: '#ffffff'
-                                            }}
-                                        />
-                                    </FormControl>
-                                    <FormControl size="md">
-                                        <FormLabel>최고 혈압</FormLabel>
-                                        <Input
-                                            type="number"
-                                            placeholder="최고혈압"
-                                            value={newPhysicalExam.systolic_blood_pressure}
-                                            onChange={(e) => updateDeepValue(setNewPhysicalExam, ['systolic_blood_pressure'], e.target.value)}
-                                            disabled={ommitPhysicalExam}
-                                            sx={{
-                                                backgroundColor: '#ffffff'
-                                            }}
-                                        />
-                                    </FormControl>
-                                    <FormControl size="md">
-                                        <FormLabel>체온 (℃)</FormLabel>
-                                        <Input
-                                            type="number"
-                                            placeholder="체온"
-                                            value={newPhysicalExam.body_temperature}
-                                            onChange={(e) => updateDeepValue(setNewPhysicalExam, ['body_temperature'], e.target.value)}
-                                            disabled={ommitPhysicalExam}
-                                            sx={{
-                                                backgroundColor: '#ffffff'
-                                            }}
-                                        />
-                                    </FormControl>
-                                </Stack>
+                                </Stack>}
                                 <Stack direction='row' gap={1} sx={{ py: 2, justifyContent: 'space-between', px: 10, flexWrap: 'wrap' }}>
                                     <FormControl size="md" sx={{ flex: '1 1 auto' }}>
                                         <FormLabel>등록일자</FormLabel>
@@ -490,7 +557,7 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                         <Stack gap={2} sx={{ flex: '1 1 auto' }}>
                                             <Stack direction='row' gap={5} sx={{ py: 2, justifyContent: 'space-between', px: 10 }}>
                                                 <Stack direction='row' gap={1} sx={{ flex: '1 1 auto' }}>
-                                                    <FormControl size="md" sx={{ flex: '1 1 auto' }}>
+                                                    <FormControl size="md" sx={{ flex: '1 1 auto' }} error={!validationCheck(newPatient.noks[index].relationship) && submitted}>
                                                         <FormLabel>관계</FormLabel>
                                                         <Select
                                                             size="md"
@@ -502,7 +569,11 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                                 </Chip>
                                                             )}
                                                             slotProps={{ button: { sx: { whiteSpace: 'nowrap' } } }}
-                                                            onChange={(_, value) => updateDeepValue(setNewPatient, ['noks', index, 'relationship'], value)}
+                                                            onChange={(_, value) => {
+                                                                if (value === "부" || value === "조부") updateDeepValue(setNewPatient, ['noks', index, 'sex'], 0)
+                                                                if (value === "모" || value === "조모") updateDeepValue(setNewPatient, ['noks', index, 'sex'], 1)
+                                                                updateDeepValue(setNewPatient, ['noks', index, 'relationship'], value)
+                                                            }}
                                                             sx={{
                                                                 backgroundColor: '#ffffff'
                                                             }}
@@ -525,12 +596,6 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                                 backgroundColor: '#ffffff'
                                                             }}
                                                         />
-                                                        {!validationCheck(newPatient?.noks[index].last_name) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>
                                                     <FormControl size="md" error={!validationCheck(newPatient?.noks[index].first_name) && submitted} sx={{ flex: "1 1 auto" }}>
                                                         <FormLabel><br/></FormLabel>
@@ -543,12 +608,6 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                                 backgroundColor: '#ffffff'
                                                             }}
                                                         />
-                                                        {!validationCheck(newPatient?.noks[index].first_name) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>
                                                 </Stack>
                                                 <FormControl size="md">
@@ -559,9 +618,9 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                         onChange={(e) => updateDeepValue(setNewPatient, ['noks', index, 'sex'], e.target.value)}
                                                         orientation='horizontal'
                                                     >
-                                                        <Radio value="0" label="남" variant="outlined" />
-                                                        <Radio value="1" label="여" variant="outlined" />
-                                                        <Radio value="2" label="기타" variant="outlined" />
+                                                        <Radio value="0" label="남" variant="outlined" color={validationCheck(newPatient?.noks[index].sex) || !submitted ? 'neutral' : 'danger'} />
+                                                        <Radio value="1" label="여" variant="outlined" color={validationCheck(newPatient?.noks[index].sex) || !submitted ? 'neutral' : 'danger'} />
+                                                        <Radio value="2" label="기타" variant="outlined" color={validationCheck(newPatient?.noks[index].sex) || !submitted ? 'neutral' : 'danger'} />
                                                     </RadioGroup>
                                                 </FormControl>
                                             </Stack>
@@ -589,7 +648,7 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                             value={dayjs(newPatient.noks[index].birthday).format('YYMMDD')}
                                                             sx={{
                                                                 backgroundColor: '#ffffff'
-                                                            }}
+                                                            }}                                                            
                                                             disabled={true}
                                                         />
                                                     </FormControl>
@@ -598,17 +657,16 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                             type="number"
                                                             placeholder=""
                                                             value={newPatient.noks[index].social_number}
-                                                            onChange={(e) => updateDeepValue(setNewPatient, ['noks', index, 'social_number'], e.target.value)}
+                                                            onChange={(e) => {
+                                                                let value = e.target.value
+                                                                if (value.length > 7) value = value.slice(0, 7)
+                                                                updateDeepValue(setNewPatient, ['noks', index, 'social_number'], value)
+                                                            }}
                                                             sx={{
                                                                 backgroundColor: '#ffffff'
                                                             }}
-                                                        />
-                                                        {!validationCheck(newPatient.noks[index].social_number) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }   
+                                                            onKeyDown={preventAllNonDigit}
+                                                        /> 
                                                     </FormControl>
                                                 </Stack>
                                             </Stack>
@@ -631,34 +689,36 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                             type="number"
                                                             placeholder=""
                                                             value={newPatient.noks[index].tel[0]}
-                                                            onChange={(e) => updateDeepValue(setNewPatient, ['noks', index, 'tel', 0], e.target.value)}
+                                                            onChange={
+                                                                (e) => {
+                                                                    let value = e.target.value
+                                                                    if (value.length > 4) value = value.slice(0, 4)
+                                                                    updateDeepValue(setNewPatient, ['noks', index, 'tel', 0], value)
+                                                                }
+                                                            }
+                                                            onKeyDown={preventAllNonDigit}
                                                             sx={{
                                                                 backgroundColor: '#ffffff'
                                                             }}
                                                         />
-                                                        {!validationCheck(newPatient.noks[index].tel[0]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }   
                                                     </FormControl>
                                                     <FormControl size="md" error={!validationCheck(newPatient.noks[index].tel[1]) && submitted} sx={{ justifyContent: "flex-end", flex: '1 1 auto' }}>
                                                         <Input
                                                             type="number"
                                                             placeholder=""
                                                             value={newPatient.noks[index].tel[1]}
-                                                            onChange={(e) => updateDeepValue(setNewPatient, ['noks', index, 'tel', 1], e.target.value)}
+                                                            onChange={
+                                                                (e) => {
+                                                                    let value = e.target.value
+                                                                    if (value.length > 4) value = value.slice(0, 4)
+                                                                    updateDeepValue(setNewPatient, ['noks', index, 'tel', 1], value)
+                                                                }
+                                                            }
+                                                            onKeyDown={preventAllNonDigit}
                                                             sx={{
                                                                 backgroundColor: '#ffffff'
                                                             }}
-                                                        />
-                                                        {!validationCheck(newPatient.noks[index].tel[1]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }   
+                                                        /> 
                                                     </FormControl>
                                                 </Stack>
                                             </Stack>
@@ -687,13 +747,8 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                                     backgroundColor: '#ffffff'
                                                                 }}
                                                                 disabled={true}
-                                                            />
-                                                            {!validationCheck(newPatient.noks[index].post_number) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }   
+                                                                onKeyDown={preventAllNonDigit}
+                                                            />  
                                                         </FormControl>
                                                         <FormControl sx={{ justifyContent: 'flex-end' }}>
                                                             <Button onClick={() => {setTargetNok(index); setAddressSearcherOpen(true)}}>
@@ -712,13 +767,7 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                                     backgroundColor: '#ffffff'
                                                                 }}
                                                                 disabled={isSameAddress[index]}
-                                                            />
-                                                            {!validationCheck(newPatient.noks[index].address_detail) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }   
+                                                            /> 
                                                         </FormControl>
                                                         <FormControl size="md" sx={{ margin: 'auto 0' }}>                                                        
                                                             <FormLabel>환자와 동일</FormLabel>
@@ -739,7 +788,7 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                                                 </Stack>
                                             </Stack> 
                                         </Stack>
-                                        <IconButton onClick={() => {updateDeepValue(setNewPatient, ['noks'], [...newPatient.noks.slice(0, index), ...newPatient.noks.slice(index+1)]); setIsSameAddress([...isSameAddress.slice(0, index), ...isSameAddress.slice(index+1)])}}>
+                                        <IconButton color="danger" onClick={() => {updateDeepValue(setNewPatient, ['noks'], [...newPatient.noks.slice(0, index), ...newPatient.noks.slice(index+1)]); setIsSameAddress([...isSameAddress.slice(0, index), ...isSameAddress.slice(index+1)])}}>
                                             <Delete />
                                         </IconButton>
                                     </Stack>
@@ -776,9 +825,17 @@ const PatientsTableAddModal = ({ show, isNew, selectedPatient, addPatient, addPh
                         </FormAccordionDetails>
                     </FormAccordion>                    
                 </Box>
+                <CustomSnackbar
+                    open={snackbarShow}
+                    snackbarMsg={snackbarMsg}
+                    color={snackbarType}
+                    onClose={() => {
+                        setSnackbarShow(false);
+                    }}
+                />
                 <Button variant='soft' onClick={handleAddPatient} sx={{ mx: 'auto', mt: 'auto', width: '50%' }}>
                     {isNew ? "추가": "변경"}
-                </Button>    
+                </Button>
             </Sheet>
             <Modal open={addressSearcherOpen} onClose={() => setAddressSearcherOpen(false)} sx={{ left: 'var(--Sidebar-width)' }}>
                 <ModalDialog>

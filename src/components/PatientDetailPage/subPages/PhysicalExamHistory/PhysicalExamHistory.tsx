@@ -4,9 +4,9 @@ import { useParams } from 'react-router-dom';
 import axios from "axios";
 import { useLocalTokenValidation } from "../../../../api/commons/auth";
 import { PhysicalExam } from "../../../../interfaces";
-import { Box, Divider, IconButton, Sheet, Stack, Typography } from "@mui/joy";
+import { Box, Divider, Sheet, Stack, Typography } from "@mui/joy";
 import { Delete, EditNote, PostAdd } from "@mui/icons-material";
-import { Alert, TableMui } from "../../../commons";
+import { Alert, TableMui, TooltippedIconButton } from "../../../commons";
 import { HeadCell, ID } from "../../../commons/TableMui";
 import isLeapYear from 'dayjs/plugin/isLeapYear'
 import utc from "dayjs/plugin/utc"
@@ -26,6 +26,7 @@ const PhysicalExamHistory = ({ axiosMode, renewPatient }: { axiosMode: boolean, 
 			id: 'recorded',
 			numeric: false,
 			label: '시행 일자',
+			sortable: true,
 			parse: (value: (PhysicalExam & ID)[keyof (PhysicalExam & ID)]) => {
 				return dayjs(value.toString()).format('YYYY년 MM월 DD일 HH시 mm분')
 			}
@@ -176,23 +177,26 @@ const PhysicalExamHistory = ({ axiosMode, renewPatient }: { axiosMode: boolean, 
 						<Stack direction='row'
 							sx={{ transition: 'width 0.4s ease' }}
 						>
-							<IconButton
-								variant='plain'
-								onClick={() => { setIsNewPhysicalExam(true); setToggleEditor(true) } }
-							><PostAdd />
-							</IconButton>
-							<IconButton
-								variant='plain'
-								onClick={() => { setIsNewPhysicalExam(false); setToggleEditor(true) } }
+							<TooltippedIconButton
+								tooltipString="추가"
+								onClick={() => {setIsNewPhysicalExam(true); setToggleEditor(true)}}
+							>
+								<PostAdd />
+							</TooltippedIconButton>
+							<TooltippedIconButton
+								tooltipString="편집"
+								onClick={() => {setIsNewPhysicalExam(false); setToggleEditor(true)}}
 								disabled={selected.length !== 1}
-							><EditNote />
-							</IconButton>
-							<IconButton
-								variant='plain'
-								onClick={() => setShowDeletionAlert(true) }
+							>
+								<EditNote />
+							</TooltippedIconButton>
+							<TooltippedIconButton
+								tooltipString="삭제"
+								onClick={() => setShowDeletionAlert(true)}
 								disabled={selected.length === 0}
-							><Delete />
-							</IconButton>
+							>
+								<Delete />
+							</TooltippedIconButton>							
 						</Stack>
 					</Box>
 					<Divider component="div" sx={{ my: 1 }} />

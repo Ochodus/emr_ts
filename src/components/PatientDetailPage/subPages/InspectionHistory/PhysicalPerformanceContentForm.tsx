@@ -3,8 +3,8 @@ import { BallBounce, DynamicMovement, FunctionalLine, PhysicalPerformanceContent
 import { updateDeepValue, validationCheck } from 'api/commons/utils'
 import dayjs from 'dayjs'
 import { FormAccordion, FormAccordionDetails, FormAccordionHeader, FormAccordionSummary } from './CustomTheme'
-import { Box, Divider, FormControl, FormHelperText, FormLabel, IconButton, Input, Stack, Typography } from '@mui/joy'
-import { Add, Delete, InfoOutlined } from '@mui/icons-material'
+import { Box, Divider, FormControl, FormLabel, IconButton, Input, Stack, Typography } from '@mui/joy'
+import { Add, Delete } from '@mui/icons-material'
 
 interface PhysicalPerformanceContentFormProps {
     content?: PhysicalPerformanceContent, 
@@ -66,18 +66,18 @@ const initialBallBounce: BallBounce = {
         step: "", 
         distance: "", 
         trials: [
-            {time: "", amount: ""}, 
-            {time: "", amount: ""}, 
-            {time: "", amount: ""}
+            {time: 0, amount: 0}, 
+            {time: 0, amount: 0}, 
+            {time: 0, amount: 0}
         ], 
         note: ""
     }, 
     lt: {step: "", 
         distance: "", 
         trials: [
-            {time: "", amount: ""}, 
-            {time: "", amount: ""}, 
-            {time: "", amount: ""}
+            {time: 0, amount: 0}, 
+            {time: 0, amount: 0}, 
+            {time: 0, amount: 0}
         ], 
         note: ""
     }
@@ -102,11 +102,33 @@ const PhysicalPerformanceContentForm = ({
     setContentValidation, 
     setExDate
 }: PhysicalPerformanceContentFormProps) => {
+
+    
     const formValidationCheck = useCallback(() => {
-        return (
-            true
+        return (            
+            validationCheck(content?.y_balance) &&
+            validationCheck(content?.functional_line) &&
+            validationCheck(content?.ball_bounce.map(bb => {
+                return [bb.trial_number, bb.lt.step, bb.lt.distance, bb.lt.trials[0], bb.rt.step, bb.rt.distance, bb.rt.trials[0]]
+            })) &&
+            validationCheck(content?.dynamic_movement.map(dm => {
+                return [
+                    dm.brasilian_step.time, 
+                    dm.diagonal_line_run.time, 
+                    dm.forward_side_to_step.lt, 
+                    dm.forward_side_to_step.rt,
+                    dm.side_one_step_in_out.lt,
+                    dm.side_one_step_in_out.rt,
+                    dm.side_step.lt,
+                    dm.side_step.rt,
+                    dm.side_two_step_in_out.lt,
+                    dm.side_two_step_in_out.rt,
+                    dm.trial_number,
+                    dm.two_leg_jump.time
+                ]
+            }))
         )
-    }, [])
+    }, [content?.y_balance, content?.functional_line, content?.ball_bounce, content?.dynamic_movement])
 
     useEffect(() => {
         if (Object.keys(ocrResult).length === 0) return
@@ -171,12 +193,6 @@ const PhysicalPerformanceContentForm = ({
                                                     mx: 'auto',
                                                 }}
                                             />
-                                            {!validationCheck(inspection.trial_number) && submitted && 
-                                                <FormHelperText>
-                                                    <InfoOutlined />
-                                                    필수 입력란입니다.
-                                                </FormHelperText>                            
-                                            }
                                         </FormControl>
                                         <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>
                                         <Stack direction='column' sx={{ width: '5%' }}>
@@ -209,20 +225,8 @@ const PhysicalPerformanceContentForm = ({
                                                                     width: '6.5rem'
                                                                 }}
                                                             />
-                                                            {!validationCheck(inspection.rt.rt.lt[0]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.rt.rt.lt[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.rt.rt.lt[1]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder=""
@@ -247,21 +251,9 @@ const PhysicalPerformanceContentForm = ({
                                                                     backgroundColor: '#ffffff',
                                                                     width: '6.5rem'
                                                                 }}
-                                                            />    
-                                                            {!validationCheck(inspection.rt.rt.rt[0]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }                                            
+                                                            />                                            
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.rt.rt.rt[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.rt.rt.rt[1]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder=""
@@ -299,20 +291,8 @@ const PhysicalPerformanceContentForm = ({
                                                                     width: '6.5rem'
                                                                 }}
                                                             />
-                                                            {!validationCheck(inspection.rt.lt.lt[0]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.rt.lt.lt[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.rt.lt.lt[1]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder=""
@@ -337,21 +317,9 @@ const PhysicalPerformanceContentForm = ({
                                                                     backgroundColor: '#ffffff',
                                                                     width: '6.5rem'
                                                                 }}
-                                                            />    
-                                                            {!validationCheck(inspection.rt.lt.rt[0]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }                                            
+                                                            />
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.rt.lt.rt[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.rt.lt.rt[1]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder=""
@@ -390,20 +358,8 @@ const PhysicalPerformanceContentForm = ({
                                                                     width: '6.5rem'
                                                                 }}
                                                             />
-                                                            {!validationCheck(inspection.lt.rt.lt[0]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.lt.rt.lt[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.lt.rt.lt[1]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder=""
@@ -428,21 +384,9 @@ const PhysicalPerformanceContentForm = ({
                                                                     backgroundColor: '#ffffff',
                                                                     width: '6.5rem'
                                                                 }}
-                                                            />    
-                                                            {!validationCheck(inspection.lt.rt.rt[0]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }                                            
+                                                            />
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.lt.rt.rt[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.lt.rt.rt[1]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder=""
@@ -480,20 +424,8 @@ const PhysicalPerformanceContentForm = ({
                                                                     width: '6.5rem'
                                                                 }}
                                                             />
-                                                            {!validationCheck(inspection.lt.lt.lt[0]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.lt.lt.lt[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.lt.lt.lt[1]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder=""
@@ -518,21 +450,9 @@ const PhysicalPerformanceContentForm = ({
                                                                     backgroundColor: '#ffffff',
                                                                     width: '6.5rem'
                                                                 }}
-                                                            />    
-                                                            {!validationCheck(inspection.lt.lt.rt[0]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }                                            
+                                                            />
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.lt.lt.rt[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.lt.lt.rt[1]) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder=""
@@ -602,12 +522,6 @@ const PhysicalPerformanceContentForm = ({
                                                     mx: 'auto',
                                                 }}
                                             />
-                                            {!validationCheck(inspection.trial_number) && submitted && 
-                                                <FormHelperText>
-                                                    <InfoOutlined />
-                                                    필수 입력란입니다.
-                                                </FormHelperText>                            
-                                            }
                                         </FormControl>
                                         <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>                                                                  
                                         <Box sx={{ display: 'flex', width: '85%' }}>
@@ -634,20 +548,8 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.rt.at[0]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>
                                                     <FormControl size="md" error={!validationCheck(inspection.rt.at[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                        {!validationCheck(inspection.rt.at[1]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                         <Input
                                                             type="number"
                                                             placeholder=""
@@ -672,21 +574,9 @@ const PhysicalPerformanceContentForm = ({
                                                                 backgroundColor: '#ffffff',
                                                                 width: '6.5rem'
                                                             }}
-                                                        />    
-                                                        {!validationCheck(inspection.rt.pl[0]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }                                            
+                                                        />                                          
                                                     </FormControl>
                                                     <FormControl size="md" error={!validationCheck(inspection.rt.pl[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                        {!validationCheck(inspection.rt.pl[1]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                         <Input
                                                             type="number"
                                                             placeholder=""
@@ -712,20 +602,8 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.rt.pm[0]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>
                                                     <FormControl size="md" error={!validationCheck(inspection.rt.pm[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                        {!validationCheck(inspection.rt.pm[1]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                         <Input
                                                             type="number"
                                                             placeholder=""
@@ -763,20 +641,8 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.lt.at[0]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>
                                                     <FormControl size="md" error={!validationCheck(inspection.lt.at[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                        {!validationCheck(inspection.lt.at[1]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                         <Input
                                                             type="number"
                                                             placeholder=""
@@ -801,21 +667,9 @@ const PhysicalPerformanceContentForm = ({
                                                                 backgroundColor: '#ffffff',
                                                                 width: '6.5rem'
                                                             }}
-                                                        />    
-                                                        {!validationCheck(inspection.lt.pl[0]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }                                            
+                                                        />                                             
                                                     </FormControl>
                                                     <FormControl size="md" error={!validationCheck(inspection.lt.pl[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                        {!validationCheck(inspection.lt.pl[1]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                         <Input
                                                             type="number"
                                                             placeholder=""
@@ -841,20 +695,8 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.lt.pm[0]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>
                                                     <FormControl size="md" error={!validationCheck(inspection.lt.pm[1]) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                        {!validationCheck(inspection.lt.pm[1]) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                         <Input
                                                             type="number"
                                                             placeholder=""
@@ -921,12 +763,6 @@ const PhysicalPerformanceContentForm = ({
                                                     mx: 'auto',
                                                 }}
                                             />
-                                            {!validationCheck(inspection.trial_number) && submitted && 
-                                                <FormHelperText>
-                                                    <InfoOutlined />
-                                                    필수 입력란입니다.
-                                                </FormHelperText>                            
-                                            }
                                         </FormControl>
                                         <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>                                                                  
                                         <Box sx={{ display: 'flex', width: '85%' }}>
@@ -951,12 +787,6 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.rt.step) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>
                                                     <FormControl size="md" error={!validationCheck(inspection.rt.distance) && submitted}>                                                        
                                                         <FormLabel>cm</FormLabel>
@@ -969,13 +799,7 @@ const PhysicalPerformanceContentForm = ({
                                                                 backgroundColor: '#ffffff',
                                                                 width: '6.5rem'
                                                             }}
-                                                        />                   
-                                                        {!validationCheck(inspection.rt.distance) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }                                 
+                                                        />
                                                     </FormControl>
                                                 </Stack>
                                                 <Divider orientation='horizontal' sx={{ '--Divider-lineColor': 'lightgray' }}/>
@@ -993,20 +817,8 @@ const PhysicalPerformanceContentForm = ({
                                                                     width: '6.5rem'
                                                                 }}
                                                             />
-                                                            {!validationCheck(inspection.rt.trials[0].amount) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.rt.trials[0].time) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.rt.trials[0].time) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder="개"
@@ -1020,7 +832,7 @@ const PhysicalPerformanceContentForm = ({
                                                         </FormControl>
                                                     </Stack>
                                                     <Stack direction='row' gap={1}>
-                                                        <FormControl size="md" error={!validationCheck(inspection.rt.trials[1].amount) && submitted}>                                                    
+                                                        <FormControl size="md">                                                    
                                                             <FormLabel>2회차 (초/개)</FormLabel>
                                                             <Input
                                                                 type="number"
@@ -1031,21 +843,9 @@ const PhysicalPerformanceContentForm = ({
                                                                     backgroundColor: '#ffffff',
                                                                     width: '6.5rem'
                                                                 }}
-                                                            />    
-                                                            {!validationCheck(inspection.rt.trials[1].amount) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }                                            
+                                                            />
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.rt.trials[1].time) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.rt.trials[1].time) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder="개"
@@ -1059,7 +859,7 @@ const PhysicalPerformanceContentForm = ({
                                                         </FormControl>
                                                     </Stack>
                                                     <Stack direction='row' gap={1}>
-                                                        <FormControl size="md" error={!validationCheck(inspection.rt.trials[2].amount) && submitted}>
+                                                        <FormControl size="md">
                                                             <FormLabel>3회차 (초/개)</FormLabel>
                                                             <Input
                                                                 type="number"
@@ -1071,20 +871,8 @@ const PhysicalPerformanceContentForm = ({
                                                                     width: '6.5rem'
                                                                 }}
                                                             />
-                                                            {!validationCheck(inspection.rt.trials[2].amount) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.rt.trials[2].time) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.rt.trials[2].time) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder="개"
@@ -1134,12 +922,6 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.lt.step) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>
                                                     <FormControl size="md" error={!validationCheck(inspection.lt.distance) && submitted}>                                                        
                                                         <FormLabel>cm</FormLabel>
@@ -1152,13 +934,7 @@ const PhysicalPerformanceContentForm = ({
                                                                 backgroundColor: '#ffffff',
                                                                 width: '6.5rem'
                                                             }}
-                                                        />                   
-                                                        {!validationCheck(inspection.lt.distance) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }                                 
+                                                        />
                                                     </FormControl>
                                                 </Stack>
                                                 <Divider orientation='horizontal' sx={{ '--Divider-lineColor': 'lightgray' }}/>
@@ -1176,20 +952,8 @@ const PhysicalPerformanceContentForm = ({
                                                                     width: '6.5rem'
                                                                 }}
                                                             />
-                                                            {!validationCheck(inspection.lt.trials[0].amount) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.lt.trials[0].time) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.lt.trials[0].time) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder="개"
@@ -1203,7 +967,7 @@ const PhysicalPerformanceContentForm = ({
                                                         </FormControl>
                                                     </Stack>
                                                     <Stack direction='row' gap={1}>
-                                                        <FormControl size="md" error={!validationCheck(inspection.lt.trials[1].amount) && submitted}>                                                    
+                                                        <FormControl size="md">                                                    
                                                             <FormLabel>2회차 (초/개)</FormLabel>
                                                             <Input
                                                                 type="number"
@@ -1214,21 +978,9 @@ const PhysicalPerformanceContentForm = ({
                                                                     backgroundColor: '#ffffff',
                                                                     width: '6.5rem'
                                                                 }}
-                                                            />    
-                                                            {!validationCheck(inspection.lt.trials[1].amount) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }                                            
+                                                            />                                         
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.lt.trials[1].time) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.lt.trials[1].time) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder="개"
@@ -1242,7 +994,7 @@ const PhysicalPerformanceContentForm = ({
                                                         </FormControl>
                                                     </Stack>
                                                     <Stack direction='row' gap={1}>
-                                                        <FormControl size="md" error={!validationCheck(inspection.lt.trials[2].amount) && submitted}>
+                                                        <FormControl size="md">
                                                             <FormLabel>3회차 (초/개)</FormLabel>
                                                             <Input
                                                                 type="number"
@@ -1254,20 +1006,8 @@ const PhysicalPerformanceContentForm = ({
                                                                     width: '6.5rem'
                                                                 }}
                                                             />
-                                                            {!validationCheck(inspection.lt.trials[2].amount) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                         </FormControl>
                                                         <FormControl size="md" error={!validationCheck(inspection.lt.trials[2].time) && submitted} sx={{ flexDirection: 'column-reverse' }}>
-                                                            {!validationCheck(inspection.lt.trials[2].time) && submitted && 
-                                                                <FormHelperText>
-                                                                    <InfoOutlined />
-                                                                    필수 입력란입니다.
-                                                                </FormHelperText>                            
-                                                            }
                                                             <Input
                                                                 type="number"
                                                                 placeholder="개"
@@ -1338,7 +1078,7 @@ const PhysicalPerformanceContentForm = ({
                             return (
                                 <React.Fragment key={index}>
                                     <Stack direction='row' sx={{ display: 'flex', width: '100%' }}>
-                                        <FormControl size="md" error={!validationCheck("") && submitted} sx={{ width: '10%', my: 'auto', flex: '0 0 auto' }}>
+                                        <FormControl size="md" error={!validationCheck(inspection.trial_number) && submitted} sx={{ width: '10%', my: 'auto', flex: '0 0 auto' }}>
                                             <Input
                                                 type="number"
                                                 placeholder=""
@@ -1350,12 +1090,6 @@ const PhysicalPerformanceContentForm = ({
                                                     mx: 'auto',
                                                 }}
                                             />
-                                            {!validationCheck(inspection.trial_number) && submitted && 
-                                                <FormHelperText>
-                                                    <InfoOutlined />
-                                                    필수 입력란입니다.
-                                                </FormHelperText>                            
-                                            }
                                         </FormControl>                                       
                                         <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>                                                                
                                         <Stack sx={{ display: 'flex', width: '85%' }}>
@@ -1363,7 +1097,7 @@ const PhysicalPerformanceContentForm = ({
                                                 <Typography sx={{ width: '25%', textAlign: 'center', margin: 'auto' }}>Two leg jump</Typography>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>   
                                                 <Stack direction='row' gap={1} sx={{ justifyContent: 'center', width: '30%', py: 1 }}>
-                                                    <FormControl size="md" error={!validationCheck("") && submitted}>
+                                                    <FormControl size="md" error={!validationCheck(inspection.two_leg_jump.time) && submitted}>
                                                         <FormLabel>시간 (s)</FormLabel>
                                                         <Input
                                                             type="number"
@@ -1375,12 +1109,6 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.two_leg_jump.time) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>                                                    
                                                 </Stack>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>                      
@@ -1402,7 +1130,7 @@ const PhysicalPerformanceContentForm = ({
                                                 <Typography sx={{ width: '25%', textAlign: 'center', margin: 'auto' }}>Side Step</Typography>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>   
                                                 <Stack direction='row' gap={1} sx={{ justifyContent: 'center', width: '30%', py: 1 }}>
-                                                    <FormControl size="md" error={!validationCheck("") && submitted}>
+                                                    <FormControl size="md" error={!validationCheck(inspection.side_step.rt) && submitted}>
                                                         <FormLabel>RT 시간 (s)</FormLabel>
                                                         <Input
                                                             type="number"
@@ -1414,14 +1142,8 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.side_step.rt) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>    
-                                                    <FormControl size="md" error={!validationCheck("") && submitted}>
+                                                    <FormControl size="md" error={!validationCheck(inspection.side_step.lt) && submitted}>
                                                         <FormLabel>LT 시간 (s)</FormLabel>
                                                         <Input
                                                             type="number"
@@ -1433,12 +1155,6 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.side_step.lt) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>                                                   
                                                 </Stack>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>                      
@@ -1460,7 +1176,7 @@ const PhysicalPerformanceContentForm = ({
                                                 <Typography sx={{ width: '25%', textAlign: 'center', margin: 'auto' }}>Side One Step In-Out</Typography>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>   
                                                 <Stack direction='row' gap={1} sx={{ justifyContent: 'center', width: '30%', py: 1 }}>
-                                                    <FormControl size="md" error={!validationCheck("") && submitted}>
+                                                    <FormControl size="md" error={!validationCheck(inspection.side_one_step_in_out.rt) && submitted}>
                                                         <FormLabel>RT 시간 (s)</FormLabel>
                                                         <Input
                                                             type="number"
@@ -1472,14 +1188,8 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.side_one_step_in_out.rt) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>    
-                                                    <FormControl size="md" error={!validationCheck("") && submitted}>
+                                                    <FormControl size="md" error={!validationCheck(inspection.side_one_step_in_out.lt) && submitted}>
                                                         <FormLabel>LT 시간 (s)</FormLabel>
                                                         <Input
                                                             type="number"
@@ -1491,12 +1201,6 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.side_one_step_in_out.lt) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>                                                   
                                                 </Stack>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>                      
@@ -1518,7 +1222,7 @@ const PhysicalPerformanceContentForm = ({
                                                 <Typography sx={{ width: '25%', textAlign: 'center', margin: 'auto' }}>Side Two Step In-Out</Typography>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>   
                                                 <Stack direction='row' gap={1} sx={{ justifyContent: 'center', width: '30%', py: 1 }}>
-                                                    <FormControl size="md" error={!validationCheck("") && submitted}>
+                                                    <FormControl size="md" error={!validationCheck(inspection.side_two_step_in_out.rt) && submitted}>
                                                         <FormLabel>RT 시간 (s)</FormLabel>
                                                         <Input
                                                             type="number"
@@ -1530,14 +1234,8 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.side_two_step_in_out.rt) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>    
-                                                    <FormControl size="md" error={!validationCheck("") && submitted}>
+                                                    <FormControl size="md" error={!validationCheck(inspection.side_two_step_in_out.lt) && submitted}>
                                                         <FormLabel>LT 시간 (s)</FormLabel>
                                                         <Input
                                                             type="number"
@@ -1549,12 +1247,6 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.side_two_step_in_out.lt) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>                                                   
                                                 </Stack>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>                      
@@ -1576,7 +1268,7 @@ const PhysicalPerformanceContentForm = ({
                                                 <Typography sx={{ width: '25%', textAlign: 'center', margin: 'auto' }}>Forward Side Two Step</Typography>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>   
                                                 <Stack direction='row' gap={1} sx={{ justifyContent: 'center', width: '30%', py: 1 }}>
-                                                    <FormControl size="md" error={!validationCheck("") && submitted}>
+                                                    <FormControl size="md" error={!validationCheck(inspection.forward_side_to_step.rt) && submitted}>
                                                         <FormLabel>RT 시간 (s)</FormLabel>
                                                         <Input
                                                             type="number"
@@ -1588,14 +1280,8 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.forward_side_to_step.rt) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>    
-                                                    <FormControl size="md" error={!validationCheck("") && submitted}>
+                                                    <FormControl size="md" error={!validationCheck(inspection.forward_side_to_step.lt) && submitted}>
                                                         <FormLabel>LT 시간 (s)</FormLabel>
                                                         <Input
                                                             type="number"
@@ -1607,12 +1293,6 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.forward_side_to_step.lt) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>                                                   
                                                 </Stack>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>                      
@@ -1634,7 +1314,7 @@ const PhysicalPerformanceContentForm = ({
                                                 <Typography sx={{ width: '25%', textAlign: 'center', margin: 'auto' }}>Brasilian Step</Typography>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>   
                                                 <Stack direction='row' gap={1} sx={{ justifyContent: 'center', width: '30%', py: 1 }}>
-                                                    <FormControl size="md" error={!validationCheck("") && submitted}>
+                                                    <FormControl size="md" error={!validationCheck(inspection.brasilian_step.time) && submitted}>
                                                         <FormLabel>시간 (s)</FormLabel>
                                                         <Input
                                                             type="number"
@@ -1646,12 +1326,6 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.brasilian_step.time) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>                                                    
                                                 </Stack>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>                      
@@ -1673,7 +1347,7 @@ const PhysicalPerformanceContentForm = ({
                                                 <Typography sx={{ width: '25%', textAlign: 'center', margin: 'auto' }}>Diagonal Line Run</Typography>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>   
                                                 <Stack direction='row' gap={1} sx={{ justifyContent: 'center', width: '30%', py: 1 }}>
-                                                    <FormControl size="md" error={!validationCheck("") && submitted}>
+                                                    <FormControl size="md" error={!validationCheck(inspection.diagonal_line_run.time) && submitted}>
                                                         <FormLabel>시간 (s)</FormLabel>
                                                         <Input
                                                             type="number"
@@ -1685,12 +1359,6 @@ const PhysicalPerformanceContentForm = ({
                                                                 width: '6.5rem'
                                                             }}
                                                         />
-                                                        {!validationCheck(inspection.diagonal_line_run.time) && submitted && 
-                                                            <FormHelperText>
-                                                                <InfoOutlined />
-                                                                필수 입력란입니다.
-                                                            </FormHelperText>                            
-                                                        }
                                                     </FormControl>                                                    
                                                 </Stack>
                                                 <Divider orientation='vertical' sx={{ '--Divider-lineColor': 'gray' }}/>                      

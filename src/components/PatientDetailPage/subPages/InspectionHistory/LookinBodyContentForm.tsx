@@ -3,12 +3,12 @@ import { LookinBodyContent, LookinInspection } from '../../../../interfaces/insp
 import { updateDeepValue, validationCheck } from 'api/commons/utils'
 import dayjs from 'dayjs'
 import { FormAccordion, FormAccordionDetails, FormAccordionHeader, FormAccordionSummary } from './CustomTheme'
-import { Box, Chip, FormControl, FormLabel, IconButton, Select, Option, Input, Typography, Stack, Divider, FormHelperText } from '@mui/joy'
-import { Add, Delete, InfoOutlined } from '@mui/icons-material'
+import { Box, Chip, FormControl, FormLabel, IconButton, Select, Option, Input, Typography, Stack, Divider } from '@mui/joy'
+import { Add, Delete } from '@mui/icons-material'
 
 interface LookinBodyContentFormProps {
     content?: LookinBodyContent, 
-    ocrResults?: {[index: string]: string}[],
+    ocrResults?: {parseType: number, result: {[index: string]: string}[]}[],
     submitted?: boolean,
     setContent?: React.Dispatch<React.SetStateAction<LookinBodyContent>>,
     setContentValidation?: React.Dispatch<React.SetStateAction<boolean>>,
@@ -38,7 +38,7 @@ const exerciseCompareFunction = (a: string, b: string) => {
     }
 }
 
-const LookinBodyContentForm = ({content, ocrResults=[{}], submitted, setContent, setContentValidation, setExDate}: LookinBodyContentFormProps) => {
+const LookinBodyContentForm = ({content, ocrResults=[{parseType: 0, result: []}], submitted, setContent, setContentValidation, setExDate}: LookinBodyContentFormProps) => {
     const [selectedExercise, setSelectedExercise] = useState<string[]>([])
 
     const formValidationCheck = useCallback(() => {
@@ -58,15 +58,16 @@ const LookinBodyContentForm = ({content, ocrResults=[{}], submitted, setContent,
     }, [content, setContentValidation, formValidationCheck])
 
     useEffect(() => {
-        if (Object.keys(ocrResults[0]).length === 0) return
+        let data = ocrResults[0]['result']
+        if (!data || Object.keys(ocrResults[0]).length === 0) return
         
         const parsedData = {
-            exerciseNames: ocrResults[0].exerciseNames.split(/\n/),
-            fields: ocrResults[0].fields.split(/\n/),
-            values: ocrResults[0].values.split(/\n/),
-            ranges: ocrResults[0].ranges.split(/\n/),
-            note: ocrResults[0].note,
-            recommendation: ocrResults[0].recommendation
+            exerciseNames: data[0].exerciseNames?.split(/\n/) ?? [],
+            fields: data[0].fields?.split(/\n/) ?? [],
+            values: data[0].values?.split(/\n/) ?? [],
+            ranges: data[0].ranges?.split(/\n/) ?? [],
+            note: data[0].note ?? "",
+            recommendation: data[0].recommendation ?? ""
         }
 
         let inspectionLength = Math.max(+(parsedData.fields.length ?? 0), +(parsedData.exerciseNames.length ?? 0), +(parsedData.values.length ?? 0), +(parsedData.ranges.length ?? 0))
@@ -82,10 +83,12 @@ const LookinBodyContentForm = ({content, ocrResults=[{}], submitted, setContent,
             updateDeepValue(setContent, [parsedData.exerciseNames[i]], newLookinInspections)
         }
 
-        setSelectedExercise([...selectedExercise, ...parsedData.exerciseNames])
+        setSelectedExercise([...parsedData.exerciseNames])
 
-        if (setExDate) setExDate(dayjs(ocrResults[0]['exDate']))
-    }, [ocrResults, selectedExercise, setContent, setExDate])
+        if (setExDate) setExDate(dayjs(data[0]['exDate']))
+    }, [ocrResults, setSelectedExercise, setContent, setExDate])
+
+    useEffect(() => {console.log(content)}, [content])
 
     return (
         <FormAccordion defaultExpanded>
@@ -110,7 +113,7 @@ const LookinBodyContentForm = ({content, ocrResults=[{}], submitted, setContent,
                                     margin: '0 10px'
                                 }}>
                                 <Stack direction='row' gap={3}>
-                                    <FormControl size="md" error={!key && submitted}>
+                                    <FormControl size="md" error={key.includes('initial') && submitted}>
                                         <FormLabel>운동 종류</FormLabel>
                                         <Select
                                             size="md"
@@ -143,12 +146,6 @@ const LookinBodyContentForm = ({content, ocrResults=[{}], submitted, setContent,
                                                 )
                                             })} 
                                         </Select>
-                                        {!key && submitted && 
-                                            <FormHelperText>
-                                                <InfoOutlined />
-                                                필수 선택란입니다.
-                                            </FormHelperText>                            
-                                        } 
                                     </FormControl>
                                     <FormControl size="md" error={!validationCheck(value.type) && submitted}>
                                         <FormLabel>측정 능력</FormLabel>
@@ -176,12 +173,6 @@ const LookinBodyContentForm = ({content, ocrResults=[{}], submitted, setContent,
                                                 )
                                             })}
                                         </Select>
-                                        {!validationCheck(value.type) && submitted && 
-                                            <FormHelperText>
-                                                <InfoOutlined />
-                                                필수 선택란입니다.
-                                            </FormHelperText>                            
-                                        } 
                                     </FormControl>
                                     <FormControl size="md" error={!validationCheck(value.value) && submitted}>
                                         <FormLabel>측정 값</FormLabel>
@@ -189,17 +180,11 @@ const LookinBodyContentForm = ({content, ocrResults=[{}], submitted, setContent,
                                             type="number"
                                             placeholder=""
                                             value={value.value}
-                                            onChange={(e) => updateDeepValue(setContent, [key, 'value'], e.target.value)}
+                                            onChange={(e) => {let c = content[key]; if (c) console.log(c['value']); updateDeepValue(setContent, [key, 'value'], e.target.value)}}
                                             sx={{
                                                 backgroundColor: '#ffffff'
                                             }}
                                         />
-                                        {!validationCheck(value.value) && submitted && 
-                                            <FormHelperText>
-                                                <InfoOutlined />
-                                                필수 입력란입니다.
-                                            </FormHelperText>                            
-                                        } 
                                     </FormControl>
                                 </Stack>
                                 <Stack direction='row' gap={2}>
@@ -214,21 +199,9 @@ const LookinBodyContentForm = ({content, ocrResults=[{}], submitted, setContent,
                                                 backgroundColor: '#ffffff'
                                             }}
                                         />
-                                        {!validationCheck(value.min_value) && submitted && 
-                                            <FormHelperText>
-                                                <InfoOutlined />
-                                                필수 입력란입니다.
-                                            </FormHelperText>                            
-                                        }
                                     </FormControl>
                                     <Typography sx={{ my: 'auto' }}>~</Typography>
                                     <FormControl size="md" sx={{ flexDirection: 'column-reverse' }} error={!validationCheck(value.max_value) && submitted}>
-                                        {!validationCheck(value.max_value) && submitted && 
-                                            <FormHelperText>
-                                                <InfoOutlined />
-                                                필수 입력란입니다.
-                                            </FormHelperText>                            
-                                        }
                                         <Input
                                             type="number"
                                             placeholder=""

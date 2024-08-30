@@ -6,7 +6,7 @@ import axios from 'axios'
 import { useParams } from 'react-router-dom'
 import { PhysicalExam } from '../../../../interfaces'
 import { Inspection } from '../MedicalRecord/MedicalRecord'
-import { DefaultInspection, ExbodyContent, ImooveContent, InBodyContent, LookinBodyContent, PhysicalPerformanceContent, SubAnalysis } from '../../../../interfaces/inspectionType.interface'
+import { BallBounce, DefaultInspection, ExbodyContent, FunctionalLine, ImooveContent, InBodyContent, LookinBodyContent, PhysicalPerformanceContent, SubAnalysis, YBalance } from '../../../../interfaces/inspectionType.interface'
 import { Box, Chip, Divider, FormControl, FormLabel, IconButton, Select, Sheet, Stack, Textarea, Typography, Button, Option } from '@mui/joy'
 import { Close } from '@mui/icons-material'
 import { DateTimePicker, LocalizationProvider, renderTimeViewClock } from '@mui/x-date-pickers'
@@ -14,6 +14,9 @@ import dayjs from 'dayjs'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { FormAccordion, FormAccordionDetails, FormAccordionHeader, FormAccordionSummary } from '../InspectionHistory/CustomTheme'
 import { HeadCell, ID } from '../../../commons/TableMui'
+import { SummaryContainer } from '../Summary'
+import { BASE_BACKEND_URL } from 'api/commons/request'
+import { findPrimitives } from 'api/commons/utils'
 
 const useTrialHandler = (trials: {[index: string]: {startTrial: object, endTrial: object}}, setUpdates: React.Dispatch<React.SetStateAction<(Update & ID)[]>>) => {
     useEffect(() => {
@@ -39,20 +42,21 @@ const useTrialHandler = (trials: {[index: string]: {startTrial: object, endTrial
                 })
             }
             else if (keys === 'IMOOVE') {
-                let strial = trials[keys].startTrial as DefaultInspection<ImooveContent> 
-                let etrial = trials[keys].endTrial as DefaultInspection<ImooveContent> 
+                let strial = trials[keys].startTrial as DefaultInspection<ImooveContent[]> 
+                let etrial = trials[keys].endTrial as DefaultInspection<ImooveContent[]> 
+                let lastIndex = strial.content.length - 1
                 let imooveChanges: {[index: string]: ChangeInfo} = {
-                    strength: {start_value: strial.content.strength.toString(), end_value: etrial.content.strength.toString(), importance: 'high', target_dir: 'inc'},
-                    sensitivity: {start_value: strial.content.sensitivity.toString(), end_value: etrial.content.sensitivity.toString(), importance: 'high', target_dir: 'inc'},
-                    supports_stability: {start_value: strial.content.supports.stability.toString(), end_value: etrial.content.supports.stability.toString(), importance: 'low', target_dir: 'inc'},
-                    supports_distribution: {start_value: strial.content.supports.distribution.numerator.toString(), end_value: etrial.content.supports.distribution.numerator.toString(), importance: 'low', target_dir: 'inc'},
-                    supports_point: {start_value: strial.content.supports.distribution.points.toString(), end_value: etrial.content.supports.distribution.points.toString(), importance: 'low', target_dir: 'inc'},
-                    trunk_stability: {start_value: strial.content.trunk.stability.toString(), end_value: etrial.content.trunk.stability.toString(), importance: 'low', target_dir: 'inc'},
-                    trunk_distribution: {start_value: strial.content.trunk.distribution.numerator.toString(), end_value: etrial.content.trunk.distribution.numerator.toString(), importance: 'low', target_dir: 'inc'},
-                    trunk_points: {start_value: strial.content.trunk.distribution.points.toString(), end_value: etrial.content.trunk.distribution.points.toString(), importance: 'low', target_dir: 'inc'},
-                    postural_coordination: {start_value: strial.content.postural_coordination.value.toString(), end_value: etrial.content.postural_coordination.value.toString(), importance: 'low', target_dir: 'inc'},
-                    postural_points: {start_value: strial.content.postural_coordination.point.toString(), end_value: etrial.content.postural_coordination.point.toString(), importance: 'low', target_dir: 'inc'},
-                    postural_strategy: {start_value: strial.content.postural_strategy.toString(), end_value: etrial.content.postural_strategy.toString(), importance: 'low', target_dir: 'inc'}
+                    // strength: {start_value: strial.content[lastIndex].strength.toString(), end_value: etrial.content[lastIndex].strength.toString(), importance: 'high', target_dir: 'inc'},
+                    // sensitivity: {start_value: strial.content[lastIndex].sensitivity.toString(), end_value: etrial.content[lastIndex].sensitivity.toString(), importance: 'high', target_dir: 'inc'},
+                    // supports_stability: {start_value: strial.content[lastIndex].supports.stability.toString(), end_value: etrial.content[lastIndex].supports.stability.toString(), importance: 'low', target_dir: 'inc'},
+                    // supports_distribution: {start_value: strial.content[lastIndex].supports.distribution.numerator.toString(), end_value: etrial.content[lastIndex].supports.distribution.numerator.toString(), importance: 'low', target_dir: 'inc'},
+                    // supports_point: {start_value: strial.content[lastIndex].supports.distribution.points.toString(), end_value: etrial.content[lastIndex].supports.distribution.points.toString(), importance: 'low', target_dir: 'inc'},
+                    // trunk_stability: {start_value: strial.content[lastIndex].trunk.stability.toString(), end_value: etrial.content[lastIndex].trunk.stability.toString(), importance: 'low', target_dir: 'inc'},
+                    // trunk_distribution: {start_value: strial.content[lastIndex].trunk.distribution.numerator.toString(), end_value: etrial.content[lastIndex].trunk.distribution.numerator.toString(), importance: 'low', target_dir: 'inc'},
+                    // trunk_points: {start_value: strial.content[lastIndex].trunk.distribution.points.toString(), end_value: etrial.content[lastIndex].trunk.distribution.points.toString(), importance: 'low', target_dir: 'inc'},
+                    // postural_coordination: {start_value: strial.content[lastIndex].postural_coordination.value.toString(), end_value: etrial.content[lastIndex].postural_coordination.value.toString(), importance: 'low', target_dir: 'inc'},
+                    // postural_points: {start_value: strial.content[lastIndex].postural_coordination.point.toString(), end_value: etrial.content[lastIndex].postural_coordination.point.toString(), importance: 'low', target_dir: 'inc'},
+                    // postural_strategy: {start_value: strial.content[lastIndex].postural_strategy.toString(), end_value: etrial.content[lastIndex].postural_strategy.toString(), importance: 'low', target_dir: 'inc'}
                 }
                 Object.keys(imooveChanges).forEach((key) => {
                     newUpdates.push({
@@ -61,12 +65,15 @@ const useTrialHandler = (trials: {[index: string]: {startTrial: object, endTrial
                         start_date: strial.inspected,
                         end_date: etrial.inspected,
                         value_name: key,
-                        value: imooveChanges[key]
+                        value: imooveChanges[key],
+                        adderCategory: "IMOOVE",
+                        adderPath: imooveChanges[key].path,
+                        adderLabel: imooveChanges[key].lable,
+                        adderTitle: imooveChanges[key].title,
                     })
                 })
             }
             else if (keys === 'Exbody') {
-                console.log(trials)
                 let strial = trials[keys].startTrial as DefaultInspection<ExbodyContent> 
                 let etrial = trials[keys].endTrial as DefaultInspection<ExbodyContent>
                 let exbodyChanges: {[index: string]: ChangeInfo} = {
@@ -99,7 +106,11 @@ const useTrialHandler = (trials: {[index: string]: {startTrial: object, endTrial
                         start_date: strial.inspected,
                         end_date: etrial.inspected,
                         value_name: key,
-                        value: exbodyChanges[key]
+                        value: exbodyChanges[key],
+                        adderCategory: "Exbody",
+                        adderPath: exbodyChanges[key].path,
+                        adderLabel: exbodyChanges[key].lable,
+                        adderTitle: exbodyChanges[key].title,
                     })
                 })
             }
@@ -108,36 +119,39 @@ const useTrialHandler = (trials: {[index: string]: {startTrial: object, endTrial
                 let etrial = trials[keys].endTrial as DefaultInspection<InBodyContent>
                 let InBodyChanges: {[index: string]: ChangeInfo} = {                    
                     hydration: {start_value: strial.content.body_water_composition.body_water.value.toString(), end_value: etrial.content.body_water_composition.body_water.value.toString(), importance: 'res', target_dir: 'res'},
-                    extracellular: {start_value: strial.content.body_water_composition.extracellular.value.toString(), end_value: etrial.content.body_water_composition.extracellular.value.toString(), importance: 'low', target_dir: 'inc'},
-                    // minerals: {start_value: +strial.content.minerals, end_value: +etrial.content.minerals, importance: 'low', target_dir: 'inc'},
-                    // bodyFatMass: {start_value: +strial.content.skeletal_muscles_fat.body_fat_mass, end_value: +etrial.content.skeletal_muscles_fat.body_fat_mass, importance: 'high', target_dir: 'dec'},
-                    // muscleMass: {start_value: +strial.content.muscle_mass, end_value: +etrial.content.muscle_mass, importance: 'high', target_dir: 'inc'},
-                    // leanBodyMass: {start_value: +strial.content.lean_body_mass, end_value: +etrial.content.lean_body_mass, importance: 'high', target_dir: 'dec'},
-                    // skeletalMuscles: {start_value: +strial.content.skeletal_muscles_fat.skeletal_muscles_mass, end_value: +etrial.content.skeletal_muscles_fat.skeletal_muscles_mass, importance: 'high', target_dir: 'inc'},
-                    // fatPercentage: {start_value: +strial.content.obesity_detail.fat_percentage, end_value: +etrial.content.obesity_detail.fat_percentage, importance: 'high', target_dir: 'dec'},
-                    // bmi: {start_value: +strial.content.obesity_detail.BMI, end_value: +etrial.content.obesity_detail.BMI, importance: 'low', target_dir: 'dec'},
-                    // rightArmMuscle: {start_value: +strial.content.muscles_by_region.right_arm, end_value: +etrial.content.muscles_by_region.right_arm, importance: 'low', target_dir: 'inc'},
-                    // leftArmMuscle: {start_value: +strial.content.muscles_by_region.left_arm, end_value: +etrial.content.muscles_by_region.left_arm, importance: 'low', target_dir: 'inc'},
-                    // bodyMuscle: {start_value: +strial.content.muscles_by_region.body, end_value: +etrial.content.muscles_by_region.body, importance: 'low', target_dir: 'inc'},
-                    // rightLegMuscle: {start_value: +strial.content.muscles_by_region.right_leg, end_value: +etrial.content.muscles_by_region.right_leg, importance: 'low', target_dir: 'inc'},
-                    // leftLegMuscle: {start_value: +strial.content.muscles_by_region.left_leg, end_value: +etrial.content.muscles_by_region.left_leg, importance: 'low', target_dir: 'inc'},
-                    // extracellularHydrationRatio: {start_value: +strial.content.extracellular_hydration_percentage, end_value: +etrial.content.extracellular_hydration_percentage, importance: 'low', target_dir: 'res'},
-                    // extracellularHydration: {start_value: +strial.content.hydration_detail.extracellular, end_value: +etrial.content.hydration_detail.extracellular, importance: 'low', target_dir: 'res'},
-                    // intracellularHydration: {start_value: +strial.content.hydration_detail.intracellular, end_value: +etrial.content.hydration_detail.intracellular, importance: 'low', target_dir: 'res'},
-                    // //rightArmHydration: {start_value: strial.content, end_value: etrial.content.hydration_by_region.right_arm, importance: 'low', target_dir: 'res'},
-                    // //leftArmHydration: {start_value: strial.content.hydration_by_region.left_arm, end_value: etrial.content.hydration_by_region.left_arm, importance: 'low', target_dir: 'res'},
-                    // //bodyHydration: {start_value: strial.content.hydration_by_region.body, end_value: etrial.content.hydration_by_region.body, importance: 'low', target_dir: 'res'},
-                    // //rightLegHydration: {start_value: strial.content.hydration_by_region.right_leg, end_value: etrial.content.hydration_by_region.right_leg, importance: 'low', target_dir: 'res'},
-                    // //leftLegHydration: {start_value: strial.content.hydration_by_region.left_leg, end_value: etrial.content.hydration_by_region.left_leg, importance: 'low', target_dir: 'res'},
-                    // osseousMineral: {start_value: +strial.content.osseous_mineral, end_value: +etrial.content.osseous_mineral, importance: 'low', target_dir: 'inc'},
-                    // basalMetabolicRate: {start_value: +strial.content.basal_metabolic_rate, end_value: +etrial.content.basal_metabolic_rate, importance: 'low', target_dir: 'inc'},
-                    // visceralFatArea: {start_value: +strial.content.visceral_fat_area, end_value: +etrial.content.visceral_fat_area, importance: 'low', target_dir: 'dec'},
-                    // waistHipRatio: {start_value: +strial.content.waist_hip_ratio, end_value: +etrial.content.waist_hip_ratio, importance: 'low', target_dir: 'dec'},
-                    // bodyCellMass: {start_value: +strial.content.body_cell_mass, end_value: +etrial.content.body_cell_mass, importance: 'low', target_dir: 'res'},
-                    // upperArmCircumference: {start_value: +strial.content.upper_arm_circumference, end_value: +etrial.content.upper_arm_circumference, importance: 'low', target_dir: 'res'},
-                    // upperArmMuscleCircumference: {start_value: +strial.content.upper_arm_muscle_circumference, end_value: +etrial.content.upper_arm_muscle_circumference, importance: 'low', target_dir: 'inc'},
-                    // tbwFfm: {start_value: +strial.content.tbw_ffm, end_value: +etrial.content.tbw_ffm, importance: 'low', target_dir: 'res'},
-                    // smi: {start_value: +strial.content.smi, end_value: +etrial.content.smi, importance: 'low', target_dir: 'res'},
+                    extracellularHydration: {start_value: strial.content.body_water_composition.extracellular.value.toString(), end_value: etrial.content.body_water_composition.extracellular.value.toString(), importance: 'low', target_dir: 'res'},
+                    intracellularHydration: {start_value: strial.content.body_water_composition.intracellular.toString(), end_value: etrial.content.body_water_composition.intracellular.toString(), importance: 'low', target_dir: 'res'},
+                    extracellularHydrationPercentage: {start_value: strial.content.body_water_composition.extracellular_hydration_percentage.toString(), end_value: etrial.content.body_water_composition.extracellular_hydration_percentage.toString(), importance: 'low', target_dir: 'res'},
+                    bodyFatMass: {start_value: strial.content.body_composition_analysis.body_fat_mass.value.toString(), end_value: etrial.content.body_composition_analysis.body_fat_mass.value.toString(), importance: 'high', target_dir: 'dec'},
+                    leanBodyMass: {start_value: strial.content.body_composition_analysis.lean_body_mass.value.toString(), end_value: etrial.content.body_composition_analysis.lean_body_mass.value.toString(), importance: 'high', target_dir: 'dec'},
+                    minerals: {start_value: strial.content.body_composition_analysis.minerals.value.toString(), end_value: etrial.content.body_composition_analysis.minerals.value.toString(), importance: 'low', target_dir: 'inc'},
+                    osseousMineral: {start_value: strial.content.body_composition_analysis.osseous_mineral.value.toString(), end_value: etrial.content.body_composition_analysis.osseous_mineral.value.toString(), importance: 'low', target_dir: 'inc'},
+                    protein: {start_value: strial.content.body_composition_analysis.protein.value.toString(), end_value: etrial.content.body_composition_analysis.protein.value.toString(), importance: 'low', target_dir: 'inc'},
+                    // bodyFatMass: {start_value: strial.content.muscle_fat_analysis.body_fat_mass.value.toString(), end_value: etrial.content.muscle_fat_analysis.body_fat_mass.value.toString(), importance: 'low', target_dir: 'inc'},
+                    muscleMass: {start_value: strial.content.muscle_fat_analysis.muscle_mass.value.toString(), end_value: etrial.content.muscle_fat_analysis.muscle_mass.value.toString(), importance: 'high', target_dir: 'inc'},
+                    skeletalMuscleMass: {start_value: strial.content.muscle_fat_analysis.skeletal_muscles_mass.toString(), end_value: etrial.content.muscle_fat_analysis.skeletal_muscles_mass.toString(), importance: 'high', target_dir: 'inc'},
+                    weight: {start_value: strial.content.muscle_fat_analysis.weight.value.toString(), end_value: etrial.content.muscle_fat_analysis.weight.value.toString(), importance: 'low', target_dir: 'inc'},
+                    BMI: {start_value: strial.content.obesity_detail.BMI.value.toString(), end_value: etrial.content.obesity_detail.BMI.value.toString(), importance: 'low', target_dir: 'dec'},
+                    fatPercentage: {start_value: strial.content.obesity_detail.fat_percentage.value.toString(), end_value: etrial.content.obesity_detail.fat_percentage.value.toString(), importance: 'high', target_dir: 'dec'},
+                    extracellularHydrationRatio: {start_value: strial.content.obesity_detail.fat_percentage.value.toString(), end_value: etrial.content.obesity_detail.fat_percentage.value.toString(), importance: 'low', target_dir: 'res'},
+                    basalMetabolicRate: {start_value: strial.content.research_parameter.basal_metabolic_rate.value.toString(), end_value: etrial.content.research_parameter.basal_metabolic_rate.value.toString(), importance: 'low', target_dir: 'inc'},
+                    bodyCellMass: {start_value: strial.content.research_parameter.body_cell_mass.value.toString(), end_value: etrial.content.research_parameter.body_cell_mass.value.toString(), importance: 'low', target_dir: 'res'},
+                    smi: {start_value: strial.content.research_parameter.smi.toString(), end_value: etrial.content.research_parameter.smi.toString(), importance: 'low', target_dir: 'res'},
+                    tbwFfm: {start_value: strial.content.research_parameter.tbw_ffm.toString(), end_value: etrial.content.research_parameter.tbw_ffm.toString(), importance: 'low', target_dir: 'res'},
+                    upperArmCircumference: {start_value: strial.content.research_parameter.upper_arm_circumference.toString(), end_value: etrial.content.research_parameter.upper_arm_circumference.toString(), importance: 'low', target_dir: 'res'},
+                    upperArmMuscleCircumference: {start_value: strial.content.research_parameter.upper_arm_muscle_circumference.toString(), end_value: etrial.content.research_parameter.upper_arm_muscle_circumference.toString(), importance: 'low', target_dir: 'inc'},
+                    visceralFatArea: {start_value: strial.content.research_parameter.visceral_fat_area.toString(), end_value: etrial.content.research_parameter.visceral_fat_area.toString(), importance: 'low', target_dir: 'dec'},
+                    waistHipRatio: {start_value: strial.content.research_parameter.waist_hip_ratio.value.toString(), end_value: etrial.content.research_parameter.waist_hip_ratio.value.toString(), importance: 'high', target_dir: 'dec'},
+                    sbwBody: {start_value: strial.content.segmental_body_water_analysis.body.value.toString(), end_value: etrial.content.segmental_body_water_analysis.body.value.toString(), importance: 'low', target_dir: 'res'},
+                    sbwLeftArm: {start_value: strial.content.segmental_body_water_analysis.left_arm.value.toString(), end_value: etrial.content.segmental_body_water_analysis.left_arm.value.toString(), importance: 'low', target_dir: 'res'},
+                    sbwLeftLeg: {start_value: strial.content.segmental_body_water_analysis.left_leg.value.toString(), end_value: etrial.content.segmental_body_water_analysis.left_leg.value.toString(), importance: 'low', target_dir: 'res'},
+                    sbwRightArm: {start_value: strial.content.segmental_body_water_analysis.right_arm.value.toString(), end_value: etrial.content.segmental_body_water_analysis.right_arm.value.toString(), importance: 'low', target_dir: 'res'},
+                    sbwRightLeg: {start_value: strial.content.segmental_body_water_analysis.right_leg.value.toString(), end_value: etrial.content.segmental_body_water_analysis.right_leg.value.toString(), importance: 'low', target_dir: 'res'},
+                    slaBody: {start_value: strial.content.segmental_lean_analysis.body.toString(), end_value: etrial.content.segmental_lean_analysis.body.toString(), importance: 'low', target_dir: 'inc'},
+                    slaLeftArm: {start_value: strial.content.segmental_lean_analysis.left_arm.toString(), end_value: etrial.content.segmental_lean_analysis.left_arm.toString(), importance: 'low', target_dir: 'inc'},
+                    slaLeftLeg: {start_value: strial.content.segmental_lean_analysis.left_leg.toString(), end_value: etrial.content.segmental_lean_analysis.left_leg.toString(), importance: 'low', target_dir: 'inc'},
+                    slaRightArm: {start_value: strial.content.segmental_lean_analysis.right_arm.toString(), end_value: etrial.content.segmental_lean_analysis.right_arm.toString(), importance: 'low', target_dir: 'inc'},
+                    slaRightLeg: {start_value: strial.content.segmental_lean_analysis.right_leg.toString(), end_value: etrial.content.segmental_lean_analysis.right_leg.toString(), importance: 'low', target_dir: 'inc'},
                 }
                 Object.keys(InBodyChanges).forEach((key) => {
                     newUpdates.push({
@@ -146,7 +160,11 @@ const useTrialHandler = (trials: {[index: string]: {startTrial: object, endTrial
                         start_date: strial.inspected,
                         end_date: etrial.inspected,
                         value_name: key,
-                        value: InBodyChanges[key]
+                        value: InBodyChanges[key],
+                        adderCategory: "InBody",
+                        adderPath: InBodyChanges[key].path,
+                        adderLabel: InBodyChanges[key].lable,
+                        adderTitle: InBodyChanges[key].title
                     })
                 })
             }
@@ -154,50 +172,240 @@ const useTrialHandler = (trials: {[index: string]: {startTrial: object, endTrial
                 let strial = trials[keys].startTrial as DefaultInspection<LookinBodyContent>
                 let etrial = trials[keys].endTrial as DefaultInspection<LookinBodyContent>
                 let LookinBodyChanges: {[index: string]: ChangeInfo} = {}
-                Object.keys(strial.content).forEach((key) => {
-                    let name = key
-                    let svalue = strial.content[key]?.value ?? ""
-                    let evalue = etrial.content[key]?.value ?? ""
-                    if (name !== undefined) LookinBodyChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
-                })
-                Object.keys(LookinBodyChanges).forEach((key) => {
-                    newUpdates.push({
-                        id: newUpdates.length,
-                        name: "Lookin' body",
-                        start_date: strial.inspected,
-                        end_date: etrial.inspected,
-                        value_name: key,
-                        value: LookinBodyChanges[key]
-                    })
-                })
+                // Object.keys(strial.content).forEach((key) => {
+                //     let name = key
+                //     let svalue = strial.content[key]?.value ?? ""
+                //     let evalue = etrial.content[key]?.value ?? ""
+                //     if (name !== undefined) LookinBodyChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+                // })
+                // Object.keys(LookinBodyChanges).forEach((key) => {
+                //     newUpdates.push({
+                //         id: newUpdates.length,
+                //         name: "Lookin' Body",
+                //         start_date: strial.inspected,
+                //         end_date: etrial.inspected,
+                //         value_name: key,
+                //         value: LookinBodyChanges[key],
+                //         adderCategory: "Lookin' Body",
+                //         adderPath: LookinBodyChanges[key].path,
+                //         adderLabel: LookinBodyChanges[key].lable,
+                //         adderTitle: LookinBodyChanges[key].title
+                //     })
+                // })
             }
             else if (keys === "운동능력검사") {
                 let strial = trials[keys].startTrial as DefaultInspection<PhysicalPerformanceContent>
                 let etrial = trials[keys].endTrial as DefaultInspection<PhysicalPerformanceContent>
-                let LookinBodyChanges: {[index: string]: ChangeInfo} = {}
-                // Object.keys(strial.content).map((key) => {
-                //     let name = key
-                //     let svalue = strial.content[key]?.value ?? ""
-                //     let evalue = etrial.content[key]?.value ?? ""
-                //     if (name !== undefined) LookinBodyChanges[name] = {start_value: svalue === "" ? NaN : svalue, end_value: evalue === "" ? NaN : evalue, importance: 'high', target_dir: 'inc'}
-                // })
-                Object.keys(LookinBodyChanges).forEach((key) => {
+                let PhysicalPerformanceChanges: {[index: string]: ChangeInfo} = {}
+                Object.keys(strial.content).forEach((key) => {
+                    // let name
+                    // let svalue, evalue
+                    // if (key === "functional_line") {
+                    //     let st = strial.content[key as keyof PhysicalPerformanceContent] as FunctionalLine[]
+                    //     let et = etrial.content[key as keyof PhysicalPerformanceContent] as FunctionalLine[]
+                    //     for (let i = 0; i < st.length; i++) {
+                    //         name = `${key}_${i}_lt_lt_lt_0`
+                    //         svalue = st[i].lt.lt.lt[0]
+                    //         evalue = et[i].lt.lt.lt[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_lt_lt_1`
+                    //         svalue = st[i].lt.lt.lt[1]
+                    //         evalue = et[i].lt.lt.lt[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_lt_rt_0`
+                    //         svalue = st[i].lt.lt.rt[0]
+                    //         evalue = et[i].lt.lt.rt[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_lt_rt_1`
+                    //         svalue = st[i].lt.lt.rt[1]
+                    //         evalue = et[i].lt.lt.rt[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_rt_lt_0`
+                    //         svalue = st[i].lt.rt.lt[0]
+                    //         evalue = et[i].lt.rt.lt[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_rt_lt_1`
+                    //         svalue = st[i].lt.rt.lt[1]
+                    //         evalue = et[i].lt.rt.lt[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_rt_rt_0`
+                    //         svalue = st[i].lt.rt.rt[0]
+                    //         evalue = et[i].lt.rt.rt[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_rt_rt_1`
+                    //         svalue = st[i].lt.rt.rt[1]
+                    //         evalue = et[i].lt.rt.rt[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_rt_lt_lt_0`
+                    //         svalue = st[i].rt.lt.lt[0]
+                    //         evalue = et[i].rt.lt.lt[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_rt_lt_lt_1`
+                    //         svalue = st[i].rt.lt.lt[1]
+                    //         evalue = et[i].rt.lt.lt[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+                            
+                    //         name = `${key}_${i}_rt_lt_rt_0`
+                    //         svalue = st[i].rt.lt.rt[0]
+                    //         evalue = et[i].rt.lt.rt[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+                            
+                    //         name = `${key}_${i}_rt_lt_rt_1`
+                    //         svalue = st[i].rt.lt.rt[1]
+                    //         evalue = et[i].rt.lt.rt[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_rt_rt_lt_0`
+                    //         svalue = st[i].rt.rt.lt[0]
+                    //         evalue = et[i].rt.rt.lt[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_rt_rt_lt_1`
+                    //         svalue = st[i].rt.rt.lt[1]
+                    //         evalue = et[i].rt.rt.lt[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_rt_rt_rt_0`
+                    //         svalue = st[i].rt.rt.rt[0]
+                    //         evalue = et[i].rt.rt.rt[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_rt_rt_rt_1`
+                    //         svalue = st[i].rt.rt.rt[1]
+                    //         evalue = et[i].rt.rt.rt[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'high', target_dir: 'inc'}
+                    //     }
+                    // }
+                    // if (key === "y_balance") {
+                    //     let st = strial.content[key as keyof PhysicalPerformanceContent] as YBalance[]
+                    //     let et = etrial.content[key as keyof PhysicalPerformanceContent] as YBalance[]
+                    //     for (let i = 0; i < st.length; i++) {
+                    //         name = `${key}_${i}_lt_at_0`
+                    //         svalue = st[i].lt.at[0]
+                    //         evalue = et[i].lt.at[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_at_1`
+                    //         svalue = st[i].lt.at[1]
+                    //         evalue = et[i].lt.at[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_pl_0`
+                    //         svalue = st[i].lt.pl[0]
+                    //         evalue = et[i].lt.pl[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_pl_1`
+                    //         svalue = st[i].lt.pl[1]
+                    //         evalue = et[i].lt.pl[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_pm_0`
+                    //         svalue = st[i].lt.pm[0]
+                    //         evalue = et[i].lt.pm[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_pm_1`
+                    //         svalue = st[i].lt.pm[1]
+                    //         evalue = et[i].lt.pm[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_rt_at_0`
+                    //         svalue = st[i].rt.at[0]
+                    //         evalue = et[i].rt.at[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_rt_at_1`
+                    //         svalue = st[i].rt.at[1]
+                    //         evalue = et[i].rt.at[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_rt_pl_0`
+                    //         svalue = st[i].rt.pl[0]
+                    //         evalue = et[i].rt.pl[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_rt_pl_1`
+                    //         svalue = st[i].rt.pl[1]
+                    //         evalue = et[i].rt.pl[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_lt_pm_0`
+                    //         svalue = st[i].lt.pm[0]
+                    //         evalue = et[i].lt.pm[0]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+
+                    //         name = `${key}_${i}_rt_pm_1`
+                    //         svalue = st[i].rt.pm[1]
+                    //         evalue = et[i].rt.pm[1]
+
+                    //         PhysicalPerformanceChanges[name] = {start_value: svalue.toString(), end_value: evalue.toString(), importance: 'low', target_dir: 'inc'}
+                    //     }
+                    // }
+                })
+                Object.keys(PhysicalPerformanceChanges).forEach((key) => {
                     newUpdates.push({
                         id: newUpdates.length,
                         name: "운동능력검사",
                         start_date: strial.inspected,
                         end_date: etrial.inspected,
                         value_name: key,
-                        value: LookinBodyChanges[key]
+                        value: PhysicalPerformanceChanges[key],
+                        adderCategory: "운동능력검사",
+                        adderPath: PhysicalPerformanceChanges[key].path,
+                        adderLabel: PhysicalPerformanceChanges[key].lable,
+                        adderTitle: PhysicalPerformanceChanges[key].title,
                     })
                 })
             }
             else if (keys === "기본 검사") {
                 let strial = trials[keys].startTrial as PhysicalExam 
                 let etrial = trials[keys].endTrial as PhysicalExam
+
+                console.log(findPrimitives(strial))
+
+                let spair = findPrimitives(strial)
+                let epair = findPrimitives(etrial)
+
                 let physicalExamChanges: {[index: string]: ChangeInfo} = {
-                    height: {start_value: strial.height.toString(), end_value: etrial.height.toString(), importance: 'high', target_dir: 'inc'},
-                    weight: {start_value: strial.weight.toString(), end_value: etrial.weight.toString(), importance: 'high', target_dir: 'res'},
+                    height: {start_value: strial.height.toString(), end_value: etrial.height.toString(), importance: 'high', target_dir: 'inc', path: ['height'], lable: `키 (${dayjs(strial.recorded).format('YY-MM-DD')} ~ ${dayjs(etrial.recorded).format('YY-MM-DD')})`, title: '키'},
+                    weight: {start_value: strial.weight.toString(), end_value: etrial.weight.toString(), importance: 'high', target_dir: 'res', path: ['weight'], lable: `몸무게 (${dayjs(strial.recorded).format('YY-MM-DD')} ~ ${dayjs(etrial.recorded).format('YY-MM-DD')})`, title: '몸무게'},
                     systolic_blood_pressure: {start_value: strial.systolic_blood_pressure.toString(), end_value: etrial.systolic_blood_pressure.toString(), importance: 'res', target_dir: 'res'},
                     diastolic_blood_pressure: {start_value: strial.diastolic_blood_pressure.toString(), end_value: etrial.diastolic_blood_pressure.toString(), importance: 'res', target_dir: 'res'},
                     body_temperature: {start_value: strial.body_temperature.toString(), end_value: etrial.body_temperature.toString(), importance: 'res', target_dir: 'res'},
@@ -209,7 +417,11 @@ const useTrialHandler = (trials: {[index: string]: {startTrial: object, endTrial
                         start_date: strial.recorded,
                         end_date: etrial.recorded,
                         value_name: key,
-                        value: physicalExamChanges[key]
+                        value: physicalExamChanges[key],
+                        adderCategory: "Physical Exam",
+                        adderPath: physicalExamChanges[key].path,
+                        adderLabel: physicalExamChanges[key].lable,
+                        adderTitle: physicalExamChanges[key].title,
                     })
                 })
             }
@@ -223,7 +435,26 @@ export interface Update {
     start_date: string, 
     end_date: string, 
     value_name: string, 
-    value: ChangeInfo
+    value: ChangeInfo,
+    adderCategory?: string,
+    adderPath?: string[],
+    adderTitle?: string,
+    adderLabel?: string
+}
+
+export interface SelectedGraphRange {
+    start: number,
+    end: number
+}
+
+export interface GridGraphData {
+    start?: string,
+    end?: string,
+    memo?: string,
+    name: string,
+    path: string[],
+    ranges: SelectedGraphRange[],
+    type: string
 }
 
 interface ReportAddModalProps {
@@ -287,7 +518,7 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport, addReport, handleC
             numeric: true,
             label: '값 변화',
             parse: (value) => { 
-                if (typeof value !== 'string' && typeof value !== 'number') return `${value.start_value} > ${value.end_value}`
+                if (typeof value !== 'string' && typeof value !== 'number' && !Array.isArray(value)) return `${value?.start_value} > ${value?.end_value}`
                 else return ''
             }
         },
@@ -296,14 +527,14 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport, addReport, handleC
 		  numeric: true,
 		  label: '수치 변화',
           parse: (value) => { 
-            if (typeof value !== 'string' && typeof value !== 'number') {
-                let svalue = value.start_value
-                let evalue = value.end_value
+            if (typeof value !== 'string' && typeof value !== 'number' && !Array.isArray(value)) {
+                let svalue = value?.start_value
+                let evalue = value?.end_value
                 if (typeof svalue === 'number' && typeof evalue === 'number') return `${evalue - svalue > 0 ? '+' : ""}${evalue - svalue}`
-                else if (!isNaN(+svalue) && !isNaN(+evalue)) return `${+evalue - +svalue > 0 ? '+' : ""}${+evalue - +svalue}`
+                else if (svalue && evalue && !isNaN(+(svalue)) && !isNaN(+evalue)) return `${+evalue - +svalue > 0 ? '+' : ""}${+evalue - +svalue}`
                 else return "-"
             }
-            else return value
+            else return value.toString()
            }
 		},
         {
@@ -311,17 +542,17 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport, addReport, handleC
             numeric: true,
             label: '개선 여부',
             parse: (value) => { 
-                if (typeof value !== 'string' && typeof value !== 'number') {
-                    let svalue = value.start_value
-                    let evalue = value.end_value
-                    if (!isNaN(+svalue) && !isNaN(+evalue)) {
-                        if (value.target_dir === 'inc' && +evalue > +svalue) return 'Y'
-                        if (value.target_dir === 'dec' && +svalue > +evalue) return 'Y'
+                if (typeof value !== 'string' && typeof value !== 'number' && !Array.isArray(value)) {
+                    let svalue = value?.start_value
+                    let evalue = value?.end_value
+                    if (svalue && evalue && !isNaN(+svalue) && !isNaN(+evalue)) {
+                        if (value?.target_dir === 'inc' && +evalue > +svalue) return 'Y'
+                        if (value?.target_dir === 'dec' && +svalue > +evalue) return 'Y'
                         return 'N'
                     }
                     return '-'
                 }
-                else return value
+                else return value.toString()
             }
         },
         {
@@ -329,10 +560,10 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport, addReport, handleC
             numeric: true,
             label: '중요도',
             parse: (value) => { 
-                if (typeof value !== 'string' && typeof value !== 'number') {
-                    return value.importance
+                if (typeof value !== 'string' && typeof value !== 'number' && !Array.isArray(value)) {
+                    return value?.importance ?? ""
                 }
-                else return value
+                else return value.toString()
             }
         }
 	];
@@ -351,21 +582,18 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport, addReport, handleC
     const [therapiesHistory, setTherapiesHistory] = useState<{[index: string]: object[]}>({})
     const [defaultSelected, setDefaultSelected] = useState<number[]>([]);
     const [selected, setSelected] = useState<number[]>([]);
+    const [graphData, setGraphData] = useState<GridGraphData[][]>([]);
 
     const handleAddReport = () => {
         console.log(
             isNew ? "add" : ("edit - " + selectedReport),
-            "\ntherapies: " + selectedTherapies,
+            "\ntherapies: " + JSON.stringify(graphData),
             "\nmemo: " + memo
         )
 
         const newReport: Report = {
             report_date: reportDate.format(),
-            changes: selected.map((value) => {
-                return updates[value]
-            }).concat(defaultSelected.map((value) => {
-                return defaultUpdates[value]
-            })),
+            changes: graphData,
             memo: memo
         }
 
@@ -379,7 +607,7 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport, addReport, handleC
     }
 
     const getTherapyHistory = useCallback(async (type: string) => {
-        let url = `/api/patients/${patient_id}/medical/${type}`
+        let url = `${BASE_BACKEND_URL}/api/patients/${patient_id}/medical/${type}`
 		try {
 			const response = await axios.get(
 				url,
@@ -451,12 +679,23 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport, addReport, handleC
         for (let key of Object.keys(allTherapiesHistory)) {
             if (allTherapiesHistory[key]) trials[key] = {startTrial: allTherapiesHistory[key][0], endTrial: allTherapiesHistory[key].at(-1) ?? allTherapiesHistory[key][0]}
         }
-        console.log(trials)
         setDefaultTrials(trials)
     }, [allTherapiesHistory])
 
     useTrialHandler(trials, setUpdates)
     useTrialHandler(defaultTrials, setDefaultUpdates)
+
+    const updateGraphData = (value: GridGraphData[][]) => {
+        setGraphData(value)
+    }
+
+    useEffect(() => {
+        if (!isNew && selectedReport) {
+            setReportDate(dayjs(selectedReport.report_date))
+            setGraphData(selectedReport.changes)
+            setMemo(selectedReport.memo)
+        }
+    }, [isNew, selectedReport])
 
     return (
         <Sheet
@@ -519,8 +758,12 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport, addReport, handleC
                         }}>
                             <TableMui<Update & ID>
                                 headCells={headCells} 
-                                rows={defaultUpdates.filter((item) => item.value.importance === 'high')}
-                                defaultRowNumber={18}
+                                rows={defaultUpdates.filter((item) => item.value.importance === 'high' && (
+                                    (item.value.end_value !== item.value.start_value)
+                                ))}
+                                defaultRowNumber={defaultUpdates.filter((item) => item.value.importance === 'high' && (
+                                    (item.value.end_value !== item.value.start_value)
+                                )).length}
                                 selected={defaultSelected}
                                 setSelected={setDefaultSelected}
                             />
@@ -652,11 +895,29 @@ const ReportHistoryAddModal = ({ show, isNew, selectedReport, addReport, handleC
                             <TableMui<Update & ID>
                                 headCells={headCells} 
                                 rows={updates}
-                                defaultRowNumber={18}
+                                defaultRowNumber={updates.length}
                                 selected={selected}
                                 setSelected={setSelected}
                             />
                         </Stack>
+                    </FormAccordionDetails>
+                </FormAccordion>
+                <FormAccordion defaultExpanded>
+                    <FormAccordionSummary>
+                        <FormAccordionHeader>리포트 설정</FormAccordionHeader>
+                    </FormAccordionSummary>
+                    <FormAccordionDetails>
+                        <SummaryContainer 
+                            axiosMode={true} 
+                            rangeSelectable
+                            adderList={selected.map((value) => {
+                                return updates[value]
+                            }).concat(defaultSelected.map((value) => {
+                                return defaultUpdates[value]
+                            }))}
+                            initialValue={selectedReport?.changes ?? []}
+                            onChange={updateGraphData}
+                        />
                     </FormAccordionDetails>
                 </FormAccordion>
                 <FormAccordion defaultExpanded>

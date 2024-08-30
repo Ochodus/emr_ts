@@ -10,6 +10,7 @@ import { DateTimePicker, LocalizationProvider, renderTimeViewClock } from '@mui/
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
 import { validationCheck } from 'api/commons/utils'
+import { BASE_BACKEND_URL } from 'api/commons/request'
 
 interface ExerciseHistoryAddModalProps {
     show: boolean, 
@@ -111,14 +112,14 @@ const ExerciseHistoryAddModal = ({ show, isNew, selectedExercise, addExercise, h
     const getAllUsers = useCallback(async () => {
 		try {
 			const response = await axios.get(
-				`/api/users`,
+				`${BASE_BACKEND_URL}/api/users`,
 				config
 			)
 			setUserList(response.data)
 		} catch (error) {
-			console.error("환자 조회 중 오류 발생:", error)
+			console.error("의사 목록 조회 중 오류 발생:", error)
 		}
-	}, [config]) // 전체 환자 목록 가져오기
+	}, [config]) // 전체 의사 목록 가져오기
 
 
     useEffect(() => { getAllUsers() }, [ getAllUsers ])

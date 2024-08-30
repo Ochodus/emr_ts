@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { Alert, TableMui } from '../../../commons';
+import { Alert, TableMui, TooltippedIconButton } from '../../../commons';
 import axios from 'axios';
 import { useLocalTokenValidation } from 'api/commons/auth';
 import { DefaultForm } from '.';
@@ -10,7 +10,7 @@ import dayjs from 'dayjs'
 import isLeapYear from 'dayjs/plugin/isLeapYear'
 import utc from "dayjs/plugin/utc"
 import 'dayjs/locale/ko'
-import { Box, Divider, IconButton, Sheet, Stack, Tooltip, Typography } from '@mui/joy';
+import { Box, Divider, Sheet, Stack, Tooltip, Typography } from '@mui/joy';
 import { Delete, EditNote, PostAdd } from '@mui/icons-material';
 import { HeadCell, ID } from '../../../commons/TableMui';
 import ImooveContentForm from './ImooveContentForm';
@@ -106,7 +106,7 @@ const HistoryModal = ({ type }: { type: string}) => {
             try {
                 await axios.delete(
                     `${BASE_BACKEND_URL}/api/patients/${patient_id}/medical/inspections/${id}`,
-                    config		
+                    config
                 )
                 getAllInspections(type)
                 setSelected([])
@@ -129,8 +129,8 @@ const HistoryModal = ({ type }: { type: string}) => {
                     type === "설문지" ? "SURVEY" :
                     type === "족저경" ? "PODOSCOPE" :
                     type === "운동능력 검사" ? "PHYSICAL_PERFORMANCE" :
-                    type === "정렬 사진" ? "" : 
-                    type === "평지 보행 동영상" ? "" :
+                    type === "정렬 사진" ? "ALIGNMENT" : 
+                    type === "평지 보행 동영상" ? "FOOTPATH" :
                     ""
                 }`,
 				config
@@ -187,23 +187,26 @@ const HistoryModal = ({ type }: { type: string}) => {
 					<Stack direction='row'
 						sx={{ transition: 'width 0.4s ease' }}
 					>
-						<IconButton
-							variant='plain' 
-							onClick={() => {setIsNewRecord(true); handleEditorVisible(true)}}
-						><PostAdd />
-						</IconButton>
-						<IconButton
-							variant='plain' 
-							onClick={() => {setIsNewRecord(false); handleEditorVisible(true, selected[0])}}
-							disabled={selected.length !== 1}
-						><EditNote />
-						</IconButton>
-						<IconButton
-							variant='plain' 
-							onClick={() => setShowDeletionAlert(true)}
-							disabled={selected.length === 0}
-						><Delete />
-						</IconButton>
+                        <TooltippedIconButton
+                            tooltipString="추가"
+                            onClick={() => {setIsNewRecord(true); handleEditorVisible(true)}}
+                        >
+                            <PostAdd />
+                        </TooltippedIconButton>
+                        <TooltippedIconButton
+                            tooltipString="편집"
+                            onClick={() => {setIsNewRecord(false); handleEditorVisible(true, selected[0])}}
+                            disabled={selected.length !== 1}
+                        >
+                            <EditNote />
+                        </TooltippedIconButton>
+                        <TooltippedIconButton
+                            tooltipString="삭제"
+                            onClick={() => setShowDeletionAlert(true)}
+                            disabled={selected.length === 0}
+                        >
+                            <Delete />
+                        </TooltippedIconButton>						
 					</Stack>
 				</Box>
 				<Divider component="div" sx={{ my: 1 }} />
@@ -229,10 +232,12 @@ const HistoryModal = ({ type }: { type: string}) => {
                     label={type}
                     isNew={isNewRecord}
                     urlType={'imoove'}
-                    useOcr={true}
                     toggleEditor={toggleEditor}
-                    selectedForm={selectedInspection as DefaultInspection<ImooveContent> & {id: number}}
+                    selectedForm={selectedInspection as DefaultInspection<ImooveContent[]> & {id: number}}
                     handleEditorVisible={handleEditorVisible}
+                    ocrIndex={[1]}
+                    multiple
+                    useOcr
                     cv={cv}
                 >
                     <ImooveContentForm />
@@ -243,12 +248,13 @@ const HistoryModal = ({ type }: { type: string}) => {
                     label={type}
                     isNew={isNewRecord}
                     urlType={'inbody'}
-                    useOcr={true}
                     fileInputNumber={2}
                     fileInputLabel={["체성분", "체수분"]}
                     toggleEditor={toggleEditor}
                     selectedForm={selectedInspection as DefaultInspection<InBodyContent> & {id: number}}
                     handleEditorVisible={handleEditorVisible}
+                    useOcr
+                    ocrIndex={[2,3]}
                     cv={cv}
                 >
                     <InBodyContentForm />
@@ -259,10 +265,11 @@ const HistoryModal = ({ type }: { type: string}) => {
                     label={type}
                     isNew={isNewRecord}
                     urlType={'xray'}
-                    useOcr={false}
                     toggleEditor={toggleEditor}
                     selectedForm={selectedInspection as DefaultInspection<null> & {id: number}}
                     handleEditorVisible={handleEditorVisible}
+                    multiple
+                    cv={cv}
                 />
             }
             { type === "Exbody" &&
@@ -270,10 +277,11 @@ const HistoryModal = ({ type }: { type: string}) => {
                     label={type}
                     isNew={isNewRecord}
                     urlType={'exbody'}
-                    useOcr={true}
                     toggleEditor={toggleEditor}
                     selectedForm={selectedInspection as DefaultInspection<ExbodyContent> & {id: number}}
                     handleEditorVisible={handleEditorVisible}
+                    useOcr
+                    ocrIndex={[4]}
                     cv={cv}
                 >
                     <ExBodyContentForm></ExBodyContentForm>
@@ -284,10 +292,11 @@ const HistoryModal = ({ type }: { type: string}) => {
                     label={type}
                     isNew={isNewRecord}
                     urlType={'lookinbody'}
-                    useOcr={true}
                     toggleEditor={toggleEditor}
                     selectedForm={selectedInspection as DefaultInspection<LookinBodyContent> & {id: number}}
                     handleEditorVisible={handleEditorVisible}
+                    useOcr
+                    ocrIndex={[5]}
                     cv={cv}
                 >
                     <LookinBodyContentForm></LookinBodyContentForm>
@@ -298,10 +307,11 @@ const HistoryModal = ({ type }: { type: string}) => {
                     label={type}
                     isNew={isNewRecord}
                     urlType={'blood'}
-                    useOcr={false}
                     toggleEditor={toggleEditor}
                     selectedForm={selectedInspection as DefaultInspection<null> & {id: number}}
                     handleEditorVisible={handleEditorVisible}
+                    multiple
+                    cv={cv}
                 />
             }
             { type === "설문지" &&
@@ -309,10 +319,11 @@ const HistoryModal = ({ type }: { type: string}) => {
                     label={type}
                     isNew={isNewRecord}
                     urlType={'survey'}
-                    useOcr={false}
                     toggleEditor={toggleEditor}
                     selectedForm={selectedInspection as DefaultInspection<null> & {id: number}}
                     handleEditorVisible={handleEditorVisible}
+                    multiple
+                    cv={cv}
                 />
             }
             { type === "족저경" &&
@@ -320,10 +331,11 @@ const HistoryModal = ({ type }: { type: string}) => {
                     label={type}
                     isNew={isNewRecord}
                     urlType={'podoscope'}
-                    useOcr={false}
                     toggleEditor={toggleEditor}
                     selectedForm={selectedInspection as DefaultInspection<null> & {id: number}}
                     handleEditorVisible={handleEditorVisible}
+                    multiple
+                    cv={cv}
                 />
             }
             { type === "운동능력 검사" &&
@@ -331,13 +343,38 @@ const HistoryModal = ({ type }: { type: string}) => {
                     label={type}
                     isNew={isNewRecord}
                     urlType={'physical_performance'}
-                    useOcr={false}
                     toggleEditor={toggleEditor}
                     selectedForm={selectedInspection as DefaultInspection<PhysicalPerformanceContent> & {id: number}}
                     handleEditorVisible={handleEditorVisible}
+                    multiple
+                    cv={cv}
                 >
                     <PhysicalPerformanceContentForm/>
                 </DefaultForm>
+            }
+            { type === "정렬 사진" &&
+                <DefaultForm
+                    label={type}
+                    isNew={isNewRecord}
+                    urlType={'alignment'}
+                    toggleEditor={toggleEditor}
+                    selectedForm={selectedInspection as DefaultInspection<null> & {id: number}}
+                    handleEditorVisible={handleEditorVisible}
+                    multiple
+                    cv={cv}
+                />
+            }
+            { type === "평지 보행 동영상" &&
+                <DefaultForm
+                    label={type}
+                    isNew={isNewRecord}
+                    urlType={'footpath'}
+                    toggleEditor={toggleEditor}
+                    selectedForm={selectedInspection as DefaultInspection<null> & {id: number}}
+                    handleEditorVisible={handleEditorVisible}
+                    video
+                    cv={cv}
+                />
             }
             <Alert 
 				showDeletionAlert={showDeletionAlert} 

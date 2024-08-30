@@ -76,7 +76,7 @@ const PatientDetailPage = ({axiosMode}: {axiosMode: boolean}) => {
   }, [config, patient_id])
 
   const containers: ContainersType = {
-    summary: <SummaryContainer axiosMode={axiosMode}></SummaryContainer>,
+    summary: <SummaryContainer axiosMode={axiosMode} store></SummaryContainer>,
     testSelect: <TestSelection></TestSelection>,
     medicalRecord: <MedicalRecord axiosMode={axiosMode} isSummaryMode={false}></MedicalRecord>,
     exerciseGuide: <ExerciseGuide></ExerciseGuide>,

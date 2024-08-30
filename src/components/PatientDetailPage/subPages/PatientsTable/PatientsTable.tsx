@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { PatientsTableAddModal } from ".";
 import { useNavigate } from 'react-router-dom';
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { Patient, PhysicalExam } from "../../../../interfaces";
 import dayjs from 'dayjs'
 import isLeapYear from 'dayjs/plugin/isLeapYear'
 import utc from "dayjs/plugin/utc"
 import 'dayjs/locale/ko'
-import { TableMui } from "../../../commons";
+import { TableMui, TooltippedIconButton } from "../../../commons";
 import { HeadCell, ID } from "../../../commons/TableMui";
-import { Box, Divider, Sheet, Typography, IconButton, Stack } from "@mui/joy";
+import { Box, Divider, Sheet, Typography, Stack } from "@mui/joy";
 import { Delete, EditNote, PostAdd, Troubleshoot } from "@mui/icons-material";
 import { DateFilterBuffer, NumberFilterBuffer, StringFilterBuffer } from "../../../../reducers/filter";
 import { useSelector } from "react-redux";
@@ -99,11 +99,13 @@ export const PatientsTable = ({ isSummaryMode, axiosMode }: { isSummaryMode: boo
 	const postPatient = async (newPatient: Patient, isNewPatient: boolean) => {
 		try {
 			let response = isNewPatient || !patientData ? await axios.post(url, newPatient, config) : await axios.patch(`${url}/${patientData.filter((value) => {return value.id === selected[0]})[0].id}`, newPatient, config)
-		  	console.log("환자 추가 성공");
+		  	console.log(`환자 ${isNewPatient ? '추가' : '편집'} 성공`);
 			getAllPatients();
-			return response.data.id			
+			setToggleEditor(false)
+			if (response.data !== null) return response.data.id			
 		} catch (error) {
-		  	console.error("환자 추가 중 오류 발생:", error);
+			if ((error as AxiosError<{code: string}, any>).response?.data.code === "ALREADY_EXISTENT_OBJECT") {alert('이미 등록된 환자입니다. 주민등록번호를 확인해주세요.')}
+		  	else {console.error(`환자 ${isNewPatient ? '추가' : '편집'} 중 오류 발생:`, error)}
 		}
 	}
 
@@ -145,7 +147,7 @@ export const PatientsTable = ({ isSummaryMode, axiosMode }: { isSummaryMode: boo
 					urlQueryPart = `${query}=${filter.value}&${urlQueryPart}`
 			})}
 			const response = await axios.get(
-				`${BASE_BACKEND_URL}/api/patients?${urlQueryPart}`,
+				`${BASE_BACKEND_URL}/api/patients?${urlQueryPart}&count=500`,
 				config
 			)
 			setPatientData(response.data)
@@ -201,30 +203,33 @@ export const PatientsTable = ({ isSummaryMode, axiosMode }: { isSummaryMode: boo
 						<Stack direction='row'
 							sx={{ transition: 'width 0.4s ease' }}
 						>
-							<IconButton
-								variant='plain' 
+							<TooltippedIconButton
+								tooltipString="추가"
 								onClick={() => {setIsNewPatient(true); setToggleEditor(true)}}
-							><PostAdd />
-							</IconButton>
-							<IconButton
-								variant='plain' 
+							>
+								<PostAdd />
+							</TooltippedIconButton>
+							<TooltippedIconButton
+								tooltipString="편집"
 								onClick={() => {setIsNewPatient(false); setToggleEditor(true)}}
 								disabled={selected.length !== 1}
-							><EditNote />
-							</IconButton>
-							<IconButton
-								variant='plain' 
+							>
+								<EditNote />
+							</TooltippedIconButton>
+							<TooltippedIconButton
+								tooltipString="삭제"
 								onClick={() => {setShowDeletionAlert(true)}}
 								disabled={selected.length === 0}
-							><Delete />
-							</IconButton>
-							<IconButton
-								variant='plain' 
+							>
+								<Delete />
+							</TooltippedIconButton>
+							<TooltippedIconButton
+								tooltipString="상세보기"
 								onClick={() => {navigate(`../patient-detail/${encodeURIComponent(patientData.filter((patient) => patient.id === selected[0])[0].id)}`)}}
 								disabled={selected.length !== 1}
 							>
 								<Troubleshoot />
-							</IconButton>
+							</TooltippedIconButton>
 						</Stack>
 					</Box>
 					<Divider component="div" sx={{ my: 1 }} />

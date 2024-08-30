@@ -2,15 +2,14 @@ import React, { useCallback, useEffect } from 'react'
 import { SubAnalysis, ExbodyContent, analysis } from 'interfaces/inspectionType.interface'
 import { updateDeepValue, validationCheck } from 'api/commons/utils'
 import dayjs from 'dayjs'
-import { Box, Divider, FormControl, FormHelperText, Input } from '@mui/joy'
+import { Box, Divider, FormControl, Input } from '@mui/joy'
 import { FormAccordion, FormAccordionDetails, FormAccordionHeader, FormAccordionSummary } from './CustomTheme'
 import TableMui, { HeadCell } from 'components/commons/TableMui'
-import { InfoOutlined } from '@mui/icons-material'
 
 
 interface ExbodyContentFormProps {
     content?: ExbodyContent, 
-    ocrResults?: {[index: string]: string}[],
+    ocrResults?: {parseType: number, result: {[index: string]: string}[]}[],
     submitted?: boolean,
     setContent?: React.Dispatch<React.SetStateAction<ExbodyContent>>,
     setContentValidation?: React.Dispatch<React.SetStateAction<boolean>>,
@@ -125,7 +124,7 @@ const parseStringToData = (value: string | undefined) => {
     return {...parseOcrResult(converted), image: ""} as SubAnalysis
 }
 
-const ExbodyContentForm = ({content, ocrResults=[{}], submitted, setContent, setContentValidation, setExDate}: ExbodyContentFormProps) => {
+const ExbodyContentForm = ({content, ocrResults=[{parseType: 0, result: []}], submitted, setContent, setContentValidation, setExDate}: ExbodyContentFormProps) => {
     const Entry = <T extends object | string | number>({value, path, depth}: {value: T, path: string[], depth: number}) => {
         if (typeof value !== 'object') {
             return (
@@ -138,13 +137,7 @@ const ExbodyContentForm = ({content, ocrResults=[{}], submitted, setContent, set
                         sx={{
                             backgroundColor: '#ffffff'
                         }}
-                    />
-                    {!validationCheck(value) && submitted && 
-                        <FormHelperText>
-                            <InfoOutlined />
-                            필수 입력란입니다.
-                        </FormHelperText>                            
-                    }                           
+                    />                          
                 </FormControl>
             )
         } else {
@@ -185,10 +178,19 @@ const ExbodyContentForm = ({content, ocrResults=[{}], submitted, setContent, set
     })
 
     const formValidationCheck = useCallback(() => {
+        if (content === undefined || content === null) return false
         return (
-            true
+            Object.keys(content).map(key => {
+                const target = {} as SubAnalysis
+                for (const k in content[key]) {
+                    if (k !== 'image') {
+                        target[k] = content[key][k]
+                    }
+                }
+                return validationCheck(target)
+            }).every(el => el)
         )
-    }, [])
+    }, [content])
     
     useEffect(() => {
         if (setContent && !content) {
@@ -201,20 +203,22 @@ const ExbodyContentForm = ({content, ocrResults=[{}], submitted, setContent, set
     }, [content, setContentValidation, formValidationCheck])
 
     useEffect(() => {
-        if (Object.keys(ocrResults).length === 0) return
-        updateDeepValue(setContent, ['fhp'], parseStringToData(ocrResults[0].fhp)) // 뒤4도\n앞6도
-        updateDeepValue(setContent, ['trunk_lean'], parseStringToData(ocrResults[0].trunkLean)) // 우1도\n좌1도
-        updateDeepValue(setContent, ['hip_extension_and_flexion'], parseStringToData(ocrResults[0].hipExtensionFlexion)) // 우:앞21도\n뒤14도\n좌:앞20도\n뒤13도
-        updateDeepValue(setContent, ['hip_rotation'], parseStringToData(ocrResults[0].hipRotation)) //우;내3도\n외4도\n좌:내1도\n외5도
-        updateDeepValue(setContent, ['knee_extension_and_flexion'], parseStringToData(ocrResults[0].kneeExtensionFlexion)) // 좌3도\n우6도
-        updateDeepValue(setContent, ['trunk_side_lean'], parseStringToData(ocrResults[0].trunkSideLean)) // 우1도\n좌1도
-        updateDeepValue(setContent, ['horizontal_movement_of_cog'], parseStringToData(ocrResults[0].horizontalMovementOfCOG)) // 우2cm\n좌5cm
-        updateDeepValue(setContent, ['vertical_movement_of_cog'], parseStringToData(ocrResults[0].verticalMovementOfCOG)) // 위1cm
-        updateDeepValue(setContent, ['pelvic_rotation'], parseStringToData(ocrResults[0].pelvicRotation)) //우7도\n좌6도
-        updateDeepValue(setContent, ['step_width'], parseStringToData(ocrResults[0].stepWidth)) // 14cm
-        updateDeepValue(setContent, ['stride'], parseStringToData(ocrResults[0].stride)) // 38cm
+        let data = ocrResults[0]['result']
+        if (!data || Object.keys(data).length === 0) return
 
-        if (setExDate) setExDate(dayjs(ocrResults[0]['exDate']))
+        if (parseStringToData(data[0].fhp)) updateDeepValue(setContent, ['fhp'], parseStringToData(data[0].fhp)) // 뒤4도\n앞6도
+        if (parseStringToData(data[0].trunkLean)) updateDeepValue(setContent, ['trunk_lean'], parseStringToData(data[0].trunkLean)) // 우1도\n좌1도
+        if (parseStringToData(data[0].hipExtensionFlexion)) updateDeepValue(setContent, ['hip_extension_and_flexion'], parseStringToData(data[0].hipExtensionFlexion)) // 우:앞21도\n뒤14도\n좌:앞20도\n뒤13도
+        if (parseStringToData(data[0].hipRotation)) updateDeepValue(setContent, ['hip_rotation'], parseStringToData(data[0].hipRotation)) //우;내3도\n외4도\n좌:내1도\n외5도
+        if (parseStringToData(data[0].kneeExtensionFlexion)) updateDeepValue(setContent, ['knee_extension_and_flexion'], parseStringToData(data[0].kneeExtensionFlexion)) // 좌3도\n우6도
+        if (parseStringToData(data[0].trunkSideLean)) updateDeepValue(setContent, ['trunk_side_lean'], parseStringToData(data[0].trunkSideLean)) // 우1도\n좌1도
+        if (parseStringToData(data[0].horizontalMovementOfCOG)) updateDeepValue(setContent, ['horizontal_movement_of_cog'], parseStringToData(data[0].horizontalMovementOfCOG)) // 우2cm\n좌5cm
+        if (parseStringToData(data[0].verticalMovementOfCOG)) updateDeepValue(setContent, ['vertical_movement_of_cog'], parseStringToData(data[0].verticalMovementOfCOG)) // 위1cm
+        if (parseStringToData(data[0].pelvicRotation)) updateDeepValue(setContent, ['pelvic_rotation'], parseStringToData(data[0].pelvicRotation)) //우7도\n좌6도
+        if (parseStringToData(data[0].stepWidth)) updateDeepValue(setContent, ['step_width'], parseStringToData(data[0].stepWidth)) // 14cm
+        if (parseStringToData(data[0].stride)) updateDeepValue(setContent, ['stride'], parseStringToData(data[0].stride)) // 38cm
+
+        if (setExDate) setExDate(dayjs(data[0]['exDate']))
 
     }, [ocrResults, setContent, setExDate])
 

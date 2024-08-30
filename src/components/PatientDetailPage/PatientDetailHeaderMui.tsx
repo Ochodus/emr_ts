@@ -1,5 +1,5 @@
 import GlobalStyles from '@mui/joy/GlobalStyles';
-import { Box, Divider, Sheet, Stack } from '@mui/joy';
+import { Box, Divider, Sheet, Stack, Tooltip } from '@mui/joy';
 import IconButton from '@mui/joy/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import { Patient, PhysicalExam } from '../../interfaces';
@@ -60,20 +60,29 @@ const PatientDetailHeaderMui = ({ curPatient, lastPhysicalExam, setSubPage }: { 
                 }}
                 spacing={{ xs: 1, md: 2 }}
             >   {curPatient ?                 
-                <><Stack 
+                <>                
+                <Stack 
                     direction='row'
                     sx={{
                         alignItems: 'center',
                         minWidth: '200px'
                     }}
                     spacing={1}
-                >
+                >                    
                     <Typography color='gray' fontWeight={550} component='div'>
                         {`${curPatient?.last_name}${curPatient?.first_name}`}
                     </Typography>
                     <Typography color='gray' component='div' sx={{margin: 'auto'}}>
                         {+(curPatient?.sex ?? "") === 0 ? <Face /> : <Face2 /> }, {new Date().getFullYear() - new Date(curPatient?.birthday ?? "").getFullYear()}세  {curPatient?.birthday}
                     </Typography>
+                    <Tooltip title="환자 변경" variant="solid" sx={{ zIndex: 100000 }}>
+                        <IconButton
+                            variant='plain' 
+                            onClick={() => {navigate(`../patient-detail/`)}}
+                        >
+                            <ChangeCircleOutlined />
+                        </IconButton>
+                    </Tooltip>
                 </Stack>
                 <Divider 
                     orientation='vertical'
@@ -182,13 +191,7 @@ const PatientDetailHeaderMui = ({ curPatient, lastPhysicalExam, setSubPage }: { 
                                 : null
                             )
                         }) : null
-                    }
-                    <IconButton
-                        variant='plain' 
-                        onClick={() => {navigate(`../patient-detail/`)}} 
-                    >
-                        <ChangeCircleOutlined />
-                    </IconButton>
+                    }                    
                 </Stack></> : <Typography fontWeight={550}>환자를 선택해주세요.</Typography>}
             </Stack>
         </Sheet>

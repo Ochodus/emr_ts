@@ -10,6 +10,8 @@ import 'dayjs/locale/ko'
 import { renderTimeViewClock } from '@mui/x-date-pickers/timeViewRenderers'
 import { Box, Divider, FormControl, FormLabel, IconButton, Input, Select, Sheet, Typography, Option, Chip, Textarea, Stack, Button, Switch } from '@mui/joy'
 import { Close } from '@mui/icons-material'
+import { validationCheck } from 'api/commons/utils'
+import { CustomSnackbar } from 'components/commons'
 
 
 dayjs.extend(isLeapYear)
@@ -20,8 +22,8 @@ interface MedicalRecordAddModalProps {
     show: boolean, 
     isNew: boolean,
     selectedMedicalRecord: Inspection | null,
-    addRecord: (newMedicalRecord: Inspection, isNew: boolean) => void,
-    addPhysicalExam: (newPhysicalExam: PhysicalExam) => void,
+    addRecord: (newMedicalRecord: Inspection, isNewRecord: boolean) => Promise<boolean>,
+    addPhysicalExam: (newPhysicalExam: PhysicalExam) => Promise<boolean>,
     handleClose: React.Dispatch<React.SetStateAction<boolean>>,
     axiosMode: boolean
 }
@@ -62,7 +64,34 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
     const [bodyTemperature, setBodyTemperature] = useState("")
     const [ommitPhysicalExam, setOmmitPhysicalExam] = useState(false)
 
-    const handleAddMedicalRecord = () => {
+    const [submitted, setSubmitted] = useState(false)
+
+    const [snackbarShow, setSnackbarShow] = useState<boolean>(false)
+    const [snackbarType, setSnackbarType] = useState<"danger" | "success">("success")
+    const [snackbarMsg, setSnackbarMsg] = useState("")
+
+    const handleAddMedicalRecord = async () => {
+        setSubmitted(true)
+
+        if (!(
+            validationCheck(selectedSymptoms, false, (value: string[]) => {return value.length !==0}) &&
+            validationCheck(selectedDiagnostics, false, (value: string[]) => {return value.length !==0}) &&
+            (
+                ommitPhysicalExam || !isNew || (
+                    validationCheck(height) &&
+                    validationCheck(weight) &&
+                    validationCheck(systolicBloodPressure) &&
+                    validationCheck(diastolicBloodPressure) &&
+                    validationCheck(bodyTemperature)
+                )
+            )
+        )) {
+            setSnackbarType("danger")
+            setSnackbarMsg(`유효하지 않은 입력값이 있습니다.`)
+            setSnackbarShow(true)
+            return
+        }
+
         console.log(
             isNew ? "add" : ("edit - " + selectedMedicalRecord?.symptoms),
             "\nsymptoms: " + selectedSymptoms,
@@ -81,7 +110,8 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
             recorded: recorded.format(),
         }
 
-        addRecord(newMedicalRecord, isNew)
+        let recordResult = await addRecord(newMedicalRecord, isNew)
+        let pyhsicalExamResult = true
 
         if (!ommitPhysicalExam && isNew) {
             const newPhysicalExam: PhysicalExam = {
@@ -92,10 +122,36 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
                 systolic_blood_pressure: +systolicBloodPressure,
                 diastolic_blood_pressure: +diastolicBloodPressure
             }
-            addPhysicalExam(newPhysicalExam)
+            pyhsicalExamResult = await addPhysicalExam(newPhysicalExam)
+        }
+
+        if (recordResult && pyhsicalExamResult) {
+            setSnackbarType("success")
+            setSnackbarMsg(`진료 기록을 ${isNew ? "추가" : "편집"}하였습니다.`)
+            setSnackbarShow(true)
+        }
+        else {
+            setSnackbarType("danger")
+            setSnackbarMsg(`진료 기록을 ${isNew ? "추가" : "편집"}할 수 없습니다.`)
+            setSnackbarShow(true) 
         }
         
         handleClose(false)
+        resetForm()
+    }
+
+    const resetForm = () => {
+        setSubmitted(false)
+        setHeight("")
+        setWeight("")
+        setSystolicBloodPressure("")
+        setDiastolicBloodPressure("")
+        setBodyTemperature("")
+        setOmmitPhysicalExam(false)
+        setSelectedSymptoms([])
+        setSelectedDiagnostics([])
+        setMemo("")
+        setRecorded(dayjs())
     }
 
     useEffect(() => {
@@ -106,10 +162,7 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
             setRecorded(dayjs(selectedMedicalRecord.recorded))
         }
         else {
-            setSelectedSymptoms([])
-            setSelectedDiagnostics([])
-            setMemo("")
-            setRecorded(dayjs())
+            resetForm()
         }
     }, [isNew, selectedMedicalRecord])
 
@@ -190,7 +243,7 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
                             p: '0px 5px',
                             alignItems: 'middle'
                         }}>
-                            <FormControl size="md">
+                            <FormControl size="md" error={!validationCheck(height) && !ommitPhysicalExam && submitted}>
                                 <FormLabel>신장 (cm)</FormLabel>
                                 <Input
                                     type="number"
@@ -203,7 +256,7 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
                                     }}
                                 />
                             </FormControl>
-                            <FormControl size="md">
+                            <FormControl size="md" error={!validationCheck(weight) && !ommitPhysicalExam && submitted}>
                                 <FormLabel>몸무게 (kg)</FormLabel>
                                 <Input
                                     type="number"
@@ -216,7 +269,7 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
                                     }}
                                 />
                             </FormControl>
-                            <FormControl size="md">
+                            <FormControl size="md" error={!validationCheck(diastolicBloodPressure) && !ommitPhysicalExam && submitted}>
                                 <FormLabel>최저 혈압</FormLabel>
                                 <Input
                                     type="number"
@@ -229,7 +282,7 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
                                     }}
                                 />
                             </FormControl>
-                            <FormControl size="md">
+                            <FormControl size="md" error={!validationCheck(systolicBloodPressure) && !ommitPhysicalExam && submitted}>
                                 <FormLabel>최고 혈압</FormLabel>
                                 <Input
                                     type="number"
@@ -242,7 +295,7 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
                                     }}
                                 />
                             </FormControl>
-                            <FormControl size="md">
+                            <FormControl size="md" error={!validationCheck(bodyTemperature) && !ommitPhysicalExam && submitted}>
                                 <FormLabel>체온 (℃)</FormLabel>
                                 <Input
                                     type="number"
@@ -282,7 +335,7 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
                         p: '0px 5px',
                         alignItems: 'middle'
                     }}>
-                        <FormControl size="md">
+                        <FormControl size="md" error={!validationCheck(selectedSymptoms, false, (value: string[]) => {return value.length !==0}) && submitted}>
                             <FormLabel>증상</FormLabel>
                             <Select
                                 multiple
@@ -311,7 +364,7 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
                                 })}
                             </Select>
                         </FormControl>
-                        <FormControl size="md">
+                        <FormControl size="md" error={!validationCheck(selectedDiagnostics, false, (value: string[]) => {return value.length !==0}) && submitted}>
                             <FormLabel>진단</FormLabel>
                             <Select
                                 multiple
@@ -401,6 +454,14 @@ const MedicalRecordAddModal = ({ show, isNew, selectedMedicalRecord, addRecord, 
                     </Stack>
                 </Box>
             </Box>
+            <CustomSnackbar
+                open={snackbarShow}
+                snackbarMsg={snackbarMsg}
+                color={snackbarType}
+                onClose={() => {
+                    setSnackbarShow(false);
+                }}
+            />
             <Button variant='soft' onClick={handleAddMedicalRecord} sx={{ margin: 'auto', width: '50%' }}>
                 {isNew ? "추가": "변경"}
             </Button>

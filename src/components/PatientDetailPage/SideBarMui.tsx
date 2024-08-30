@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Sheet, GlobalStyles, Box, IconButton, Typography, Input, List, ListItem, ListItemContent, Divider, Avatar } from '@mui/joy'
+import { Sheet, GlobalStyles, Box, IconButton, Typography, Input, List, ListItem, ListItemContent, Divider, Avatar, Tooltip } from '@mui/joy'
 import { SearchRounded, AssignmentRounded, KeyboardArrowDown, SettingsAccessibility, Info, LogoutRounded, Home } from '@mui/icons-material';
 import ListItemButton, { listItemButtonClasses } from '@mui/joy/ListItemButton'
 import { useLocalTokenValidation } from '../../api/commons/auth';
@@ -8,20 +8,30 @@ import { Patient, User } from '../../interfaces';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BASE_BACKEND_URL, BASE_FILE_URL } from 'api/commons/request';
+import { useDispatch } from 'react-redux';
+import { changeAuth } from "reducers/auth";
+
 
 function Toggler({
     defaultExpanded = false,
+    curPatient = undefined,
     renderToggle,
     children,
   }: {
     defaultExpanded?: boolean;
     children: React.ReactNode;
+    curPatient: Patient & {id: number} | undefined;
     renderToggle: (params: {
       open: boolean;
       setOpen: React.Dispatch<React.SetStateAction<boolean>>;
     }) => React.ReactNode;
   }) {
     const [open, setOpen] = React.useState(defaultExpanded);
+
+    useEffect(() => {
+        if (curPatient === undefined) setOpen(false)
+    }, [curPatient])
+
     return (
       <React.Fragment>
         {renderToggle({ open, setOpen })}
@@ -44,6 +54,7 @@ function Toggler({
 const SideBarMui = ({ curPatient, setSubPage }: { curPatient: Patient & {id: number} | undefined, setSubPage: (s: string) => any}) => {
     const checkAuth = useLocalTokenValidation()
     const navigate = useNavigate()
+    const dispatch = useDispatch();
     
     const auth = window.localStorage.getItem("persist:auth")
     const accessToken = auth ? JSON.parse(JSON.parse(auth).token) : null
@@ -66,6 +77,11 @@ const SideBarMui = ({ curPatient, setSubPage }: { curPatient: Patient & {id: num
 			console.error("사용자 조회 중 오류 발생:", error)
 		}
 	}, [config])
+
+    const handleLogoutClick = () => {
+        dispatch(changeAuth({email: "", token: ""}))
+        checkAuth(".", null)
+    } // 로그아웃 버튼 클릭 이벤트
 
     useEffect(() => {
 		checkAuth(".")
@@ -157,6 +173,7 @@ const SideBarMui = ({ curPatient, setSubPage }: { curPatient: Patient & {id: num
                         >
                         <ListItem nested>
                             <Toggler
+                                curPatient={curPatient}
                                 renderToggle={({ open, setOpen }) => (
                                     <ListItemButton onClick={() => setOpen(!open)} disabled={curPatient === undefined}>
                                     <SettingsAccessibility />
@@ -181,6 +198,7 @@ const SideBarMui = ({ curPatient, setSubPage }: { curPatient: Patient & {id: num
                         </ListItem>
                         <ListItem nested>
                             <Toggler
+                                curPatient={curPatient}
                                 renderToggle={({ open, setOpen }) => (
                                     <ListItemButton onClick={() => setOpen(!open)} disabled={curPatient === undefined}>
                                     <AssignmentRounded />
@@ -214,18 +232,19 @@ const SideBarMui = ({ curPatient, setSubPage }: { curPatient: Patient & {id: num
                         </ListItem>
                         <ListItem nested>
                             <Toggler
-                                    renderToggle={({ open, setOpen }) => (
-                                        <ListItemButton onClick={() => setOpen(!open)} disabled={curPatient === undefined}>
-                                        <Info />
-                                        <ListItemContent>
-                                            <Typography level="title-sm">기타 자료</Typography>
-                                        </ListItemContent>
-                                        <KeyboardArrowDown
-                                            sx={{ transform: open ? 'rotate(180deg)' : 'none' }}
-                                        />
-                                        </ListItemButton>
-                                    )}
-                                >
+                                curPatient={curPatient}
+                                renderToggle={({ open, setOpen }) => (
+                                    <ListItemButton onClick={() => setOpen(!open)} disabled={curPatient === undefined}>
+                                    <Info />
+                                    <ListItemContent>
+                                        <Typography level="title-sm">기타 자료</Typography>
+                                    </ListItemContent>
+                                    <KeyboardArrowDown
+                                        sx={{ transform: open ? 'rotate(180deg)' : 'none' }}
+                                    />
+                                    </ListItemButton>
+                                )}
+                            >
                                 <List sx={{ gap: 0.5 }}>
                                     <ListItem sx={{ mt: 0.5 }}>
                                     <ListItemButton onClick={() => setSubPage("personalInformation")}>개인정보 제공 및 활용 동의서</ListItemButton>
@@ -249,9 +268,11 @@ const SideBarMui = ({ curPatient, setSubPage }: { curPatient: Patient & {id: num
                         <Typography level="title-sm">{`${currentUser?.last_name}${currentUser?.first_name}`}</Typography>
                         <Typography level="body-xs">{currentUser?.email}</Typography>
                     </Box>
-                    <IconButton size="sm" variant="plain" color="neutral">
-                        <LogoutRounded />
-                    </IconButton>
+                    <Tooltip title="로그아웃" sx={{ zIndex: 10000 }}>
+                        <IconButton size="sm" variant="plain" color="neutral" onClick={() => handleLogoutClick()}>
+                            <LogoutRounded />
+                        </IconButton>
+                    </Tooltip>
                 </Box>
             </Sheet>
         </div>

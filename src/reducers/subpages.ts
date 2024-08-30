@@ -13,7 +13,6 @@ const initialState: LastIndex = {
 const subpageReducer = createReducer(initialState, (builder) => {
     builder
         .addCase(changeSubPage, (state, action) => {
-            
             state.currentSubPage = action.payload.currentSubPage
         })
 });

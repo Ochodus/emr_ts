@@ -8,11 +8,12 @@ import dayjs from 'dayjs'
 import isLeapYear from 'dayjs/plugin/isLeapYear'
 import utc from "dayjs/plugin/utc"
 import 'dayjs/locale/ko'
-import { Alert, TableMui } from "../../../commons";
+import { Alert, TableMui, TooltippedIconButton } from "../../../commons";
 import { HeadCell, ID } from "../../../commons/TableMui";
-import { Box, Divider, Sheet, Typography, IconButton, Stack } from "@mui/joy";
+import { Box, Divider, Sheet, Typography,Stack, Tooltip } from "@mui/joy";
 import { Delete, EditNote, PostAdd } from "@mui/icons-material";
 import { BASE_BACKEND_URL } from "api/commons/request";
+import { prettyPrint } from "api/commons/utils";
 
 dayjs.extend(isLeapYear)
 dayjs.extend(utc)
@@ -33,6 +34,7 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 		  id: 'recorded',
 		  numeric: false,
 		  label: '일자',
+		  sortable: true,
 		  parse: (value: (Inspection & ID)[keyof (Inspection & ID)]) => {
 			return dayjs(value.toString()).format('YYYY년 MM월 DD일 HH시 mm분')
 		  }
@@ -48,9 +50,9 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 		  label: '진단',
 		},
 		{
-		  id: 'memo',
-		  numeric: true,
-		  label: '비고',
+			id: 'memo',
+			numeric: true,
+			label: '비고',
 		}
 	];
 
@@ -91,8 +93,10 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 			isNewRecord || !medicalRecords ? await axios.post(url, newMedicalRecord, config) : await axios.patch(`${url}/${medicalRecords.filter((value) => {return value.id === selected[0]})[0].id}`, newMedicalRecord, config)
 		  	console.log("진료 기록 추가 성공");
 			getMedicalRecord();
+			return true
 		} catch (error) {
 		  	console.error("진료 기록 추가 중 오류 발생:", error);
+			return false
 		}
 	}
 
@@ -100,8 +104,10 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 		try {
 			await axios.post(`${BASE_BACKEND_URL}/api/patients/${patient_id}/medical/physical_exam`, newPhysicalExam, config)
 		  	console.log("기본 사항 갱신");
+			return true
 		} catch (error) {
 		  	console.error("기본 사항 갱신 중 오류 발생:", error);
+			return false
 		}
 	}
 
@@ -172,23 +178,26 @@ const MedicalRecord = ({ isSummaryMode, axiosMode }: { isSummaryMode: boolean, a
 						<Stack direction='row'
 							sx={{ transition: 'width 0.4s ease' }}
 						>
-							<IconButton
-								variant='plain' 
+							<TooltippedIconButton
+								tooltipString="추가"
 								onClick={() => {setIsNewRecord(true); setToggleEditor(true)}}
-							><PostAdd />
-							</IconButton>
-							<IconButton
-								variant='plain' 
+							>
+								<PostAdd />
+							</TooltippedIconButton>
+							<TooltippedIconButton
+								tooltipString="편집"
 								onClick={() => {setIsNewRecord(false); setToggleEditor(true)}}
 								disabled={selected.length !== 1}
-							><EditNote />
-							</IconButton>
-							<IconButton
-								variant='plain' 
+							>
+								<EditNote />
+							</TooltippedIconButton>
+							<TooltippedIconButton
+								tooltipString="삭제"
 								onClick={() => setShowDeletionAlert(true)}
 								disabled={selected.length === 0}
-							><Delete />
-							</IconButton>
+							>
+								<Delete />
+							</TooltippedIconButton>
 						</Stack>
 					</Box>
 					<Divider component="div" sx={{ my: 1 }} />

@@ -4,9 +4,8 @@ import dayjs from 'dayjs'
 import isLeapYear from 'dayjs/plugin/isLeapYear'
 import utc from "dayjs/plugin/utc"
 import 'dayjs/locale/ko'
-import { FormControl, FormHelperText, FormLabel, Input, Stack } from '@mui/joy'
+import { FormControl, FormLabel, Input, Stack } from '@mui/joy'
 import { FormAccordion, FormAccordionDetails, FormAccordionHeader, FormAccordionSummary } from './CustomTheme';
-import { InfoOutlined } from '@mui/icons-material'
 import { updateDeepValue, validationCheck } from 'api/commons/utils'
 
 dayjs.extend(isLeapYear)
@@ -15,7 +14,7 @@ dayjs.locale('ko')
 
 interface InBodyContentFormProps {
     content?: InBodyContent, 
-    ocrResults?: {[index: string]: string}[],
+    ocrResults?: {parseType: number, result: {[index: string]: any}[]}[],
     submitted?: boolean,
     setContent?: React.Dispatch<React.SetStateAction<InBodyContent>>,
     setContentValidation?: React.Dispatch<React.SetStateAction<boolean>>,
@@ -87,12 +86,6 @@ const defaultInput = (placeholder: string, value: numberInput, error?: boolean, 
     return (
         <FormControl size="md" error={error} sx={{ flexDirection: label ? 'column' : 'column-reverse', flex: label ? '1 1 auto' : '0 0 auto' }}>
             {label && <FormLabel>{label}</FormLabel>}
-            {!label && error &&
-                <FormHelperText>
-                    <InfoOutlined />
-                    필수 입력란입니다.
-                </FormHelperText>
-            }
             <Input
                 type="number"
                 placeholder={placeholder}
@@ -101,18 +94,12 @@ const defaultInput = (placeholder: string, value: numberInput, error?: boolean, 
                 sx={{
                     backgroundColor: '#ffffff'
                 }}
-            />
-            {label && error && 
-                <FormHelperText>
-                    <InfoOutlined />
-                    필수 입력란입니다.
-                </FormHelperText>                  
-            }                           
+            />                        
         </FormControl>
     )
 }
 
-const InBodyContentForm = ({content, ocrResults=[{}], submitted, setContent, setContentValidation, setExDate}: InBodyContentFormProps) => {
+const InBodyContentForm = ({content, ocrResults=[{parseType: 0, result: []}], submitted, setContent, setContentValidation, setExDate}: InBodyContentFormProps) => {
     const GroupInput = (value: {[index: string]: rangeInput | numberInput}) => {
         if (!content) return
         let parentKey = Object.keys(content).find(key => content[key as keyof InBodyContent] === value) ?? ""
@@ -176,52 +163,53 @@ const InBodyContentForm = ({content, ocrResults=[{}], submitted, setContent, set
     }, [content, setContentValidation, formValidationCheck])
 
     useEffect(() => {
-        if (Object.keys(ocrResults[0]).length !== 0) {
-            console.log(ocrResults[0])
-            updateDeepValue(setContent, ['body_water_composition', 'intracellular'], parseStringToData(ocrResults[0]['intracellularWater']))
-            updateDeepValue(setContent, ['body_water_composition', 'extracellular'], parseStringToData(ocrResults[0]['extracellularWater']))
-            updateDeepValue(setContent, ['body_water_composition', 'extracellular_hydration_percentage'], parseStringToData(ocrResults[0]['ecwRatio']))
+        let data = ocrResults[0]['result']
+        if (data && Object.keys(data).length !== 0) {
+            if (parseStringToData(data[0]['intracellularWater']) !== undefined) updateDeepValue(setContent, ['body_water_composition', 'intracellular'], parseStringToData(data[0]['intracellularWater']))
+            if (parseStringToData(data[0]['extracellularWater']) !== undefined) updateDeepValue(setContent, ['body_water_composition', 'extracellular'], parseStringToData(data[0]['extracellularWater']))
+            if (parseStringToData(data[0]['ecwRatio']) !== undefined) updateDeepValue(setContent, ['body_water_composition', 'extracellular_hydration_percentage'], parseStringToData(data[0]['ecwRatio']))
 
-            updateDeepValue(setContent, ['segmental_body_water_analysis', 'right_arm'], parseStringToData(ocrResults[0]['rightArmSBA']))
-            updateDeepValue(setContent, ['segmental_body_water_analysis', 'left_arm'], parseStringToData(ocrResults[0]['leftArmSBA']))
-            updateDeepValue(setContent, ['segmental_body_water_analysis', 'body'], parseStringToData(ocrResults[0]['trunkSBA']))
-            updateDeepValue(setContent, ['segmental_body_water_analysis', 'right_leg'], parseStringToData(ocrResults[0]['rightLegSBA']))
-            updateDeepValue(setContent, ['segmental_body_water_analysis', 'left_leg'], parseStringToData(ocrResults[0]['leftLegSBA']))
+            if (parseStringToData(data[0]['rightArmSBA']) !== undefined) updateDeepValue(setContent, ['segmental_body_water_analysis', 'right_arm'], parseStringToData(data[0]['rightArmSBA']))
+            if (parseStringToData(data[0]['leftArmSBA']) !== undefined) updateDeepValue(setContent, ['segmental_body_water_analysis', 'left_arm'], parseStringToData(data[0]['leftArmSBA']))
+            if (parseStringToData(data[0]['trunkSBA']) !== undefined) updateDeepValue(setContent, ['segmental_body_water_analysis', 'body'], parseStringToData(data[0]['trunkSBA']))
+            if (parseStringToData(data[0]['rightLegSBA']) !== undefined) updateDeepValue(setContent, ['segmental_body_water_analysis', 'right_leg'], parseStringToData(data[0]['rightLegSBA']))
+            if (parseStringToData(data[0]['leftLegSBA']) !== undefined) updateDeepValue(setContent, ['segmental_body_water_analysis', 'left_leg'], parseStringToData(data[0]['leftLegSBA']))
 
-            updateDeepValue(setContent, ['segmental_lean_analysis', 'right_arm'], parseStringToData(ocrResults[0]['rightArmSLA']))
-            updateDeepValue(setContent, ['segmental_lean_analysis', 'left_arm'], parseStringToData(ocrResults[0]['leftArmSLA']))
-            updateDeepValue(setContent, ['segmental_lean_analysis', 'body'], parseStringToData(ocrResults[0]['trunkSLA']))
-            updateDeepValue(setContent, ['segmental_lean_analysis', 'right_leg'], parseStringToData(ocrResults[0]['rightLegSLA']))
-            updateDeepValue(setContent, ['segmental_lean_analysis', 'left_leg'], parseStringToData(ocrResults[0]['leftLegSLA']))
+            if (parseStringToData(data[0]['rightArmSLA']) !== undefined) updateDeepValue(setContent, ['segmental_lean_analysis', 'right_arm'], parseStringToData(data[0]['rightArmSLA']))
+            if (parseStringToData(data[0]['leftArmSLA']) !== undefined) updateDeepValue(setContent, ['segmental_lean_analysis', 'left_arm'], parseStringToData(data[0]['leftArmSLA']))
+            if (parseStringToData(data[0]['trunkSLA']) !== undefined) updateDeepValue(setContent, ['segmental_lean_analysis', 'body'], parseStringToData(data[0]['trunkSLA']))
+            if (parseStringToData(data[0]['rightLegSLA']) !== undefined) updateDeepValue(setContent, ['segmental_lean_analysis', 'right_leg'], parseStringToData(data[0]['rightLegSLA']))
+            if (parseStringToData(data[0]['leftLegSLA']) !== undefined) updateDeepValue(setContent, ['segmental_lean_analysis', 'left_leg'], parseStringToData(data[0]['leftLegSLA']))
 
-            updateDeepValue(setContent, ['body_composition_analysis', 'osseous_mineral'], parseStringToData(ocrResults[0]['osseousMineral']))
+            if (parseStringToData(data[0]['osseousMineral']) !== undefined) updateDeepValue(setContent, ['body_composition_analysis', 'osseous_mineral'], parseStringToData(data[0]['osseousMineral']))
 
-            updateDeepValue(setContent, ['research_parameter', 'basal_metabolic_rate'], parseStringToData(ocrResults[0]['basalMetabolicRate']))
-            updateDeepValue(setContent, ['research_parameter', 'visceral_fat_area'], parseStringToData(ocrResults[0]['visceralFatArea']))
-            updateDeepValue(setContent, ['research_parameter', 'waist_hip_ratio'], parseStringToData(ocrResults[0]['waistHipRatio']))
-            updateDeepValue(setContent, ['research_parameter', 'body_cell_mass'], parseStringToData(ocrResults[0]['bodyCellMass']))
-            updateDeepValue(setContent, ['research_parameter', 'upper_arm_circumference'], parseStringToData(ocrResults[0]['upperArmCircumference']))
-            updateDeepValue(setContent, ['research_parameter', 'tbw_ffm'], parseStringToData(ocrResults[0]['tbwFfm']))
-            updateDeepValue(setContent, ['research_parameter', 'smi'], parseStringToData(ocrResults[0]['smi']))            
+            if (parseStringToData(data[0]['basalMetabolicRate']) !== undefined) updateDeepValue(setContent, ['research_parameter', 'basal_metabolic_rate'], parseStringToData(data[0]['basalMetabolicRate']))
+            if (parseStringToData(data[0]['visceralFatArea']) !== undefined) updateDeepValue(setContent, ['research_parameter', 'visceral_fat_area'], parseStringToData(data[0]['visceralFatArea']))
+            if (parseStringToData(data[0]['waistHipRatio']) !== undefined) updateDeepValue(setContent, ['research_parameter', 'waist_hip_ratio'], parseStringToData(data[0]['waistHipRatio']))
+            if (parseStringToData(data[0]['bodyCellMass']) !== undefined) updateDeepValue(setContent, ['research_parameter', 'body_cell_mass'], parseStringToData(data[0]['bodyCellMass']))
+            if (parseStringToData(data[0]['upperArmCircumference']) !== undefined) updateDeepValue(setContent, ['research_parameter', 'upper_arm_circumference'], parseStringToData(data[0]['upperArmCircumference']))
+            if (parseStringToData(data[0]['tbwFfm']) !== undefined) updateDeepValue(setContent, ['research_parameter', 'tbw_ffm'], parseStringToData(data[0]['tbwFfm']))
+            if (parseStringToData(data[0]['smi']) !== undefined) updateDeepValue(setContent, ['research_parameter', 'smi'], parseStringToData(data[0]['smi']))            
         }
-        if (Object.keys(ocrResults[1]).length !== 0) {
-            console.log(ocrResults[1])
-            updateDeepValue(setContent, ['body_water_composition', 'body_water'], parseStringToData(ocrResults[1]['bodyWater']))
 
-            updateDeepValue(setContent, ['body_composition_analysis', 'protein'], parseStringToData(ocrResults[1]['protein']))
-            updateDeepValue(setContent, ['body_composition_analysis', 'minerals'], parseStringToData(ocrResults[1]['minerals']))
-            updateDeepValue(setContent, ['body_composition_analysis', 'body_fat_mass'], parseStringToData(ocrResults[1]['bodyFatMass']))
-            updateDeepValue(setContent, ['body_composition_analysis', 'lean_body_mass'], parseStringToData(ocrResults[1]['leanBodyMass']))
+        data = ocrResults[1]['result']
+        if (data && Object.keys(data).length !== 0) {
+            if (parseStringToData(data[0]['bodyWater']) !== undefined) updateDeepValue(setContent, ['body_water_composition', 'body_water'], parseStringToData(data[0]['bodyWater']))
 
-            updateDeepValue(setContent, ['muscle_fat_analysis', 'weight'], parseStringToData(ocrResults[1]['weight']))
-            updateDeepValue(setContent, ['muscle_fat_analysis', 'skeletal_muscles_mass'], parseStringToData(ocrResults[1]['skeletalMuscleMass']))
-            updateDeepValue(setContent, ['muscle_fat_analysis', 'muscle_mass'], parseStringToData(ocrResults[1]['muscleMass']))
-            updateDeepValue(setContent, ['muscle_fat_analysis', 'body_fat_mass'], parseStringToData(ocrResults[1]['bodyFatMass']))
+            if (parseStringToData(data[0]['protein']) !== undefined) updateDeepValue(setContent, ['body_composition_analysis', 'protein'], parseStringToData(data[0]['protein']))
+            if (parseStringToData(data[0]['minerals']) !== undefined) updateDeepValue(setContent, ['body_composition_analysis', 'minerals'], parseStringToData(data[0]['minerals']))
+            if (parseStringToData(data[0]['bodyFatMass']) !== undefined) updateDeepValue(setContent, ['body_composition_analysis', 'body_fat_mass'], parseStringToData(data[0]['bodyFatMass']))
+            if (parseStringToData(data[0]['leanBodyMass']) !== undefined) updateDeepValue(setContent, ['body_composition_analysis', 'lean_body_mass'], parseStringToData(data[0]['leanBodyMass']))
 
-            updateDeepValue(setContent, ['obesity_detail', 'BMI'], parseStringToData(ocrResults[1]['bmi']))
-            updateDeepValue(setContent, ['obesity_detail', 'fat_percentage'], parseStringToData(ocrResults[1]['percentBodyFat']))
+            if (parseStringToData(data[0]['weight']) !== undefined) updateDeepValue(setContent, ['muscle_fat_analysis', 'weight'], parseStringToData(data[0]['weight']))
+            if (parseStringToData(data[0]['skeletalMuscleMass']) !== undefined) updateDeepValue(setContent, ['muscle_fat_analysis', 'skeletal_muscles_mass'], parseStringToData(data[0]['skeletalMuscleMass']))
+            if (parseStringToData(data[0]['muscleMass']) !== undefined) updateDeepValue(setContent, ['muscle_fat_analysis', 'muscle_mass'], parseStringToData(data[0]['muscleMass']))
+            if (parseStringToData(data[0]['bodyFatMass']) !== undefined) updateDeepValue(setContent, ['muscle_fat_analysis', 'body_fat_mass'], parseStringToData(data[0]['bodyFatMass']))
 
-            updateDeepValue(setContent, ['research_parameter', 'upper_arm_muscle_circumference'], parseStringToData(ocrResults[1]['upperArmMuscleCircumference']))
+            if (parseStringToData(data[0]['bmi']) !== undefined) updateDeepValue(setContent, ['obesity_detail', 'BMI'], parseStringToData(data[0]['bmi']))
+            if (parseStringToData(data[0]['percentBodyFat']) !== undefined) updateDeepValue(setContent, ['obesity_detail', 'fat_percentage'], parseStringToData(data[0]['percentBodyFat']))
+
+            if (parseStringToData(data[0]['upperArmMuscleCircumference']) !== undefined) updateDeepValue(setContent, ['research_parameter', 'upper_arm_muscle_circumference'], parseStringToData(data[0]['upperArmMuscleCircumference']))
         }
 
     }, [ocrResults, setContent, setExDate])

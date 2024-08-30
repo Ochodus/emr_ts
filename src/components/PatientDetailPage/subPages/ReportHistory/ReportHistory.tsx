@@ -3,11 +3,11 @@ import { ReportHistoryAddModal } from ".";
 import { useParams } from 'react-router-dom';
 import axios from "axios";
 import { useLocalTokenValidation } from "../../../../api/commons/auth";
-import { Box, Divider, IconButton, Sheet, Stack, Tooltip, Typography } from "@mui/joy";
-import { Alert, TableMui } from "../../../commons";
+import { Box, Divider, Sheet, Stack, Tooltip, Typography } from "@mui/joy";
+import { Alert, TableMui, TooltippedIconButton } from "../../../commons";
 import { HeadCell, ID } from "../../../commons/TableMui";
-import { Delete, EditNote, PostAdd } from "@mui/icons-material";
-import { Update } from "./ReportHistoryAddModal";
+import { Delete, EditNote, PostAdd, Troubleshoot } from "@mui/icons-material";
+import { GridGraphData } from "./ReportHistoryAddModal";
 import { BASE_BACKEND_URL } from "api/commons/request";
 import { prettyPrint } from "api/commons/utils";
 import isLeapYear from 'dayjs/plugin/isLeapYear'
@@ -15,6 +15,7 @@ import utc from "dayjs/plugin/utc"
 import 'dayjs/locale/ko'
 import dayjs from "dayjs";
 import React from "react";
+import ReportHistoryViewer from "./ReportHistoryViewer";
 
 dayjs.extend(isLeapYear)
 dayjs.extend(utc)
@@ -24,12 +25,15 @@ export interface ChangeInfo {
 	start_value: string,
 	end_value: string,
 	importance: 'high'|'low'|'res',
-	target_dir: 'inc'|'dec'|'res'
+	target_dir: 'inc'|'dec'|'res',
+	path?: string[],
+	lable?: string,
+	title?: string
 }
 
 export interface Report {
 	report_date: string,
-	changes: Update[],
+	changes: GridGraphData[][],
 	memo: string
 } // Report 객체 타입
 
@@ -41,6 +45,7 @@ const ReportHistory = ({ axiosMode }: { axiosMode: boolean }) => {
 		  id: 'report_date',
 		  numeric: false,
 		  label: '작성 일자',
+		  sortable: true,
 		  parse: (value: (Report & ID)[keyof (Report & ID)]) => {
 			return dayjs(value.toString()).format('YYYY년 MM월 DD일 HH시 mm분')
 		  }
@@ -50,23 +55,35 @@ const ReportHistory = ({ axiosMode }: { axiosMode: boolean }) => {
 		  numeric: true,
 		  label: '변화 항목',
 		  parse: (value: (Report & ID)[keyof (Report & ID)]) => {
+			if (typeof value === 'string' || typeof value === 'number') return value
+			if (value.length === 0 || value[0].length === 0) return ""
 			return (
-                value ?
-					<div style={{ display: 'flex', justifyContent: 'center' }}>
+				<div style={{ display: 'flex', justifyContent: 'center' }}>
 						<Tooltip 
 							title={
-								<Box className='scrollable vertical' sx={{ p: 1, height: '20vh' }}>
-									<pre style={{ textAlign: 'left', display: 'inline-block', marginBottom: '0'}}>
-										{prettyPrint(value)}
-									</pre>
-								</Box>                            
+								<Stack gap={2}>
+									{value.map((row, indexY) => {
+										return (
+											<Stack direction='row' gap={2} key={indexY}>
+												{row.map((value, indexX) => {
+													return(
+														<pre style={{ textAlign: 'left', display: 'inline-block', marginBottom: '0'}} key={indexX}>
+															{prettyPrint({index: `(${indexX}, ${indexY})`, type: value.type, name: value.name, ranges: value.ranges, memo: value.memo})}
+														</pre>
+													)
+												})}
+											</Stack>
+										)
+									})}
+								</Stack>                          
 							}
 						>
-						<pre style={{ textAlign: 'left', display: 'inline-block', marginBottom: '0'}}>
-							{prettyPrint(value).split('\n')[0]} ...
-						</pre>
+							<pre style={{ textAlign: 'left', display: 'inline-block', marginBottom: '0'}}>
+								{prettyPrint({type: value[0][0].type}).split('\n')[0]} ...
+							</pre>			
 						</Tooltip>
-					</div> : ""
+					</div>
+					
 				)
             }
 		},
@@ -93,13 +110,14 @@ const ReportHistory = ({ axiosMode }: { axiosMode: boolean }) => {
 	const [reportHistory, setReportHistory] = useState<(Report & ID)[]>([]);
 	const [isNewReport, setIsNewReport] = useState(false)
 	const [toggleEditor, setToggleEditor] = useState<boolean>(false)	
+	const [toggleViewer, setToggleViewer] = useState<boolean>(false)
 	const [selected, setSelected] = useState<number[]>([]);
 	const [showDeletionAlert, setShowDeletionAlert] = useState<boolean>(false)
 
 	const getReportHistory = useCallback(async () => {
 		try {
 			const response = await axios.get(
-				url,
+				`${url}`,
 				config
 			)
 		
@@ -112,11 +130,11 @@ const ReportHistory = ({ axiosMode }: { axiosMode: boolean }) => {
 	const postReport = async (newReport: Report, isNewReport: boolean) => {
 		try {
 			isNewReport || !reportHistory ? await axios.post(url, newReport, config) : await axios.patch(`${url}/${reportHistory.filter((value) => {return value.id === selected[0]})[0].id}`, newReport, config)
-		  	console.log("진료 기록 추가 성공");
+		  	console.log("리포트 추가 성공");
 			getReportHistory();
 			setToggleEditor(false)
 		} catch (error) {
-		  	console.error("진료 기록 추가 중 오류 발생:", error);
+		  	console.error("리포트 추가 중 오류 발생:", error);
 		}
 	}
 
@@ -124,11 +142,10 @@ const ReportHistory = ({ axiosMode }: { axiosMode: boolean }) => {
 		if (reportHistory) {
 			let targetId = reportHistory.filter((value) => {return value.id === targetReportIndex})[0].id
 			try {
-				let response = await axios.delete(`${BASE_BACKEND_URL}${url}/${targetId}`, config)
-				console.log(response)
+				await axios.delete(`${url}/${targetId}`, config)
 				getReportHistory()
 			} catch (error) {
-				console.error("환자 삭제 중 오류 발생:", error)
+				console.error("리포트 삭제 중 오류 발생:", error)
 			}
 		}
 	} // 환자 삭제
@@ -160,7 +177,7 @@ const ReportHistory = ({ axiosMode }: { axiosMode: boolean }) => {
 						p: 1,
 						width: '100%',
 						flexShrink: 0,
-						left: toggleEditor ? "-100%" : 0,
+						left: toggleEditor ? "-100%" : toggleViewer ? "-200%" : 0,
 						transition: 'left 0.4s ease',
 						display: 'flex',
 						flexDirection: 'column'
@@ -182,54 +199,69 @@ const ReportHistory = ({ axiosMode }: { axiosMode: boolean }) => {
 							
 						>레포트 기록
 						</Typography>
-							<Stack direction='row'
-								sx={{ transition: 'width 0.4s ease' }}
+						<Stack direction='row'
+							sx={{ transition: 'width 0.4s ease' }}
+						>
+							<TooltippedIconButton
+								tooltipString="추가"
+								onClick={() => {setIsNewReport(true); setToggleEditor(true)}}
 							>
-								<IconButton
-									variant='plain' 
-									onClick={() => {setIsNewReport(true); setToggleEditor(true)}}
-								><PostAdd />
-								</IconButton>
-								<IconButton
-									variant='plain' 
-									onClick={() => {setIsNewReport(false); setToggleEditor(true)}}
-									disabled={selected.length !== 1}
-								><EditNote />
-								</IconButton>
-								<IconButton
-									variant='plain' 
-									onClick={() => setShowDeletionAlert(true)}
-									disabled={selected.length === 0}
-								><Delete />
-								</IconButton>
-							</Stack>
-						</Box>
-						<Divider component="div" sx={{ my: 1 }} />
-						<Box sx={{
-							flexDirection: 'column',
-							justifyContent: 'center',
-							p: '5px',
-							overflow: 'auto',
-							'&::-webkit-scrollbar': {
-								display: 'none'
-							}
-						}}>
-							<TableMui<Report & ID>
-								headCells={headCells} 
-								rows={reportHistory}
-								defaultRowNumber={18}
-								selected={selected}
-								setSelected={setSelected}
-							/>
-						</Box>
-					</Sheet>
-				<ReportHistoryAddModal 
+								<PostAdd />
+							</TooltippedIconButton>
+							<TooltippedIconButton
+								tooltipString="편집"
+								onClick={() => {setIsNewReport(false); setToggleEditor(true)}}
+								disabled={selected.length !== 1}
+							>
+								<EditNote />
+							</TooltippedIconButton>
+							<TooltippedIconButton
+								tooltipString="삭제"
+								onClick={() => setShowDeletionAlert(true)}
+								disabled={selected.length === 0}
+							>
+								<Delete />
+							</TooltippedIconButton>		
+							<TooltippedIconButton
+								tooltipString="상세보기"
+								onClick={() => {setToggleViewer(true)}}
+								disabled={selected.length !== 1}
+							>
+								<Troubleshoot />
+							</TooltippedIconButton>									
+						</Stack>
+					</Box>
+					<Divider component="div" sx={{ my: 1 }} />
+					<Box sx={{
+						flexDirection: 'column',
+						justifyContent: 'center',
+						p: '5px',
+						overflow: 'auto',
+						'&::-webkit-scrollbar': {
+							display: 'none'
+						}
+					}}>
+						<TableMui<Report & ID>
+							headCells={headCells} 
+							rows={reportHistory}
+							defaultRowNumber={18}
+							selected={selected}
+							setSelected={setSelected}
+						/>
+					</Box>
+				</Sheet>
+				{toggleEditor && <ReportHistoryAddModal 
 					show={toggleEditor} 
 					isNew={isNewReport} 
 					selectedReport={reportHistory ? reportHistory.filter((value) => {return value.id === selected[0]})[0] : null}
 					handleClose={setToggleEditor} 
 					addReport={postReport}
-				></ReportHistoryAddModal>
+				></ReportHistoryAddModal>}
+				{toggleViewer && <ReportHistoryViewer 
+					show={toggleViewer} 
+					selectedReport={reportHistory.filter((value) => {return value.id === selected[0]})[0]} 
+					handleClose={setToggleViewer}				
+				/>}
 			</Box>
 			<Alert 
 				showDeletionAlert={showDeletionAlert} 

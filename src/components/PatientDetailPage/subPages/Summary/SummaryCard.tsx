@@ -9,10 +9,13 @@ import 'react-date-range-ts/dist/theme/default.css';
 import { useParams } from "react-router-dom";
 import { PhysicalExam } from "../../../../interfaces";
 import { SummaryCardType } from "./SummaryContainer";
-import { Box, Divider, IconButton, Sheet, Typography } from "@mui/joy";
+import { Box, Chip, Divider, FormControl, FormLabel, IconButton, Select, Sheet, Typography, Option, Stack, Textarea } from "@mui/joy";
 import { Close } from "@mui/icons-material";
-import { DefaultInspection, ImooveContent, InBodyContent, LookinBodyContent } from "../../../../interfaces/inspectionType.interface";
-
+import { DefaultInspection, ExbodyContent, ImooveContent, InBodyContent, LookinBodyContent, PhysicalPerformanceContent } from "../../../../interfaces/inspectionType.interface";
+import { BASE_BACKEND_URL } from "api/commons/request";
+import cloneDeep from 'lodash/cloneDeep'
+import dayjs from "dayjs";
+import { GridGraphData, SelectedGraphRange } from "../ReportHistory/ReportHistoryAddModal";
 
 const defaultGraphProps: LineSvgProps = {
   data: [],
@@ -85,155 +88,276 @@ const defaultLegendProps: LegendProps[] = [{
   ]
 }]
 
-const SummaryCard = ({cardType, axiosMode, rowIndex, colIndex, cardClose, divider}: {cardType: SummaryCardType, axiosMode: boolean, rowIndex: number, colIndex: number, cardClose: (row: number, col: number) => void, divider: number}) => {
-    const { patient_id } = useParams()
+interface SummaryCardProps {
+  cardType: SummaryCardType, 
+  axiosMode: boolean, 
+  rowIndex: number, 
+  colIndex: number, 
+  rangeSelectable: boolean,
+  start?: string | number,
+  end?: string | number,
+  graphContainerKey: number,
+  useNote?: boolean,
+  editable?: boolean,
+  cardClose: (row: number, col: number) => void, 
+  onRangeChange: (value: SelectedGraphRange[], col_index: number, row_index: number) => void
+  onTextChange: (value: string, col_index: number, row_index: number) => void
+}
 
-    const accessToken = JSON.parse(JSON.parse(window.localStorage.getItem("persist:auth") ?? "")?.token ?? "")
-    
-    const config = useMemo(() => {
-      return {
-        headers: {
-          Authorization: "Bearer " + accessToken,
-        },
-      }
-    }, [accessToken])
+const SummaryCard = ({cardType, 
+  axiosMode, 
+  rowIndex, 
+  colIndex, 
+  rangeSelectable=false,
+  start,
+  end,
+  graphContainerKey,
+  useNote=false,
+  editable=true,
+  cardClose, 
+  onRangeChange,
+  onTextChange
+}: SummaryCardProps) => {
+  const { patient_id } = useParams()
 
-    const [graphData, setGraphData] = useState<Serie[]>([])
-    const [yLabel, setYLabel] = useState<string>("")
+  const accessToken = JSON.parse(JSON.parse(window.localStorage.getItem("persist:auth") ?? "")?.token ?? "")
+  
+  const config = useMemo(() => {
+    return {
+      headers: {
+        Authorization: "Bearer " + accessToken,
+      },
+    }
+  }, [accessToken])
 
-    const [graphProps, setGraphProps] = useState(defaultGraphProps)
+  const [graphData, setGraphData] = useState<Serie[]>([])
+  const [yLabel, setYLabel] = useState<string>("")
 
-    const getDataPoint = useCallback(<T, K extends keyof T>(object: T, path: string[]): T[K] => {
-      if (path.length === 0) return object as T[K]
-      else return getDataPoint(object[path[0] as keyof T] as T, path.slice(1))
-    }, [])
+  const [graphProps, setGraphProps] = useState(defaultGraphProps)
+  const [ranges, setRanges] = useState<{start: number, end: number}[]>([])
+  const [slicedGraphData, setSlicedGraphData] = useState<Serie[]>([])
+  const [memo, setMemo] = useState((cardType as GridGraphData).memo ?? "")
 
-    const getData = useCallback(async <T,>(url: string, id: string, path: string[], datePath: string[], graphProps?: Partial<LineSvgProps>) => {
-      try {
-        const response: AxiosResponse<T[], any> = await axios.get(
-          url,
-          config
-        )
-        
-        if (id === "Lookin' Body") {
-          let inspections: {[index: string]: Datum[]} = {}
-          response.data.map((value) => {
-            let points = getDataPoint(value, path)
-            let inspected = getDataPoint(value, datePath)
-            if (Array.isArray(points)) {
-              let datum: {[index: string]: {date: Date, value: number}} = {}
-              points.forEach((point) => {
-                datum[point.name] = {date: new Date(`${inspected}`), value: point.value}
-              })
-              return datum
-            }
-            else return {}
-          }).forEach((value) => {
-            Object.keys(value).forEach(key => {
-              if (!inspections[key]) inspections[key] = []
-              inspections[key].push({x: value[key].date, y: value[key].value})
-              inspections[key].sort((a: Datum, b: Datum): number => {
-                if (a.x && b.x) {
-                  if (a['x'] < b['x']) return -1
-                  if (a['x'] < b['x']) return 1
-                }
-                return 0
-              })
-            })
-          })
+  const getDataPoint = useCallback(<T, K extends keyof T>(object: T, path: string[]): T[K] => {
+    if (path.length === 0) return object as T[K]
+    else return getDataPoint(object[path[0] as keyof T] as T, path.slice(1))
+  }, [])
 
-         
-          let data = Object.keys(inspections).map(key => {
-            return { "id": key, "data": inspections[key] }
-          })
-          setGraphData(data)
+  const getData = useCallback(async <T,>(url: string, id: string, path: string[], datePath: string[], graphProps?: Partial<LineSvgProps>) => {
+    try {
+      const response: AxiosResponse<T[], any> = await axios.get(
+        `${BASE_BACKEND_URL}${url}`,
+        config
+      )
+      
+      let data = response.data.map((value) => {
+        let time = new Date(getDataPoint(value, datePath) as string)
+        return {x: time, y: +getDataPoint(value, path)}
+      })
+
+      data.sort((a: Datum, b: Datum): number => {
+        if (a.x && b.x) {
+          if (a.x < b.x) return -1;
+          if (a.x > b.x) return 1;
         }
-        else {
-          let data = response.data.map((value, index) => {
-            return {x: new Date(`${getDataPoint(value, datePath)}`), y: +getDataPoint(value, path)}
-          })
+        return 0;
+      });
 
-          data.sort((a: Datum, b: Datum): number => {
-            if (a.x && b.x) {
-              if (a['x'] < b['x']) return -1
-              if (a['x'] < b['x']) return 1
-            }
-            return 0
-          })
-          
-          setGraphData([{ "id": id, "data": data }])
-        }
+      setGraphData([{ "id": id, "data": data }])
+      
+      setYLabel(id)
+      setGraphProps({...defaultGraphProps, ...graphProps})
+    } catch (error) {
+      console.error("데이터 조회 중 오류 발생:", error);
+    }
+  }, [config, getDataPoint])
 
-        setYLabel(id)
-        setGraphProps({...defaultGraphProps, ...graphProps})
-      } catch (error) {
-        console.error("데이터 조회 중 오류 발생:", error);
-      }
-    }, [config, getDataPoint])
+  useEffect(() => {
+    if (graphData.length === 0) return
+    let result = graphData.map((datum, index) => {
+      return (
+        {...datum, data: datum.data.slice(
+          datum.data.findIndex((value) => (value.x as Date).getTime() === ranges[index]?.start) ?? 0,
+          (datum.data.findIndex((value) => (value.x as Date).getTime() === ranges[index]?.end) ?? 0) + 1
+        )}
+      )
+    })
+    setSlicedGraphData(result.every((datum) => datum.data.length > 0) ? result : graphData)
+  }, [graphData, ranges, end, start])
 
-    useEffect(() => {
-      if (cardType.type === "Physical Exam") getData<PhysicalExam>(`/api/patients/${patient_id}/medical/physical_exam`, cardType.name, cardType.path, ['recorded'])
-      if (cardType.type === "IMOOVE") getData<DefaultInspection<ImooveContent>>(`/api/patients/${patient_id}/medical/inspections?inspection_type=IMOOVE`, cardType.name, cardType.path, ['inspected'])
-      if (cardType.type === "InBody") getData<DefaultInspection<InBodyContent>>(`/api/patients/${patient_id}/medical/inspections?inspection_type=INBODY`, cardType.name, cardType.path, ['inspected'])
-      if (cardType.type === "Lookin' Body") getData<DefaultInspection<LookinBodyContent>>(`/api/patients/${patient_id}/medical/inspections?inspection_type=LOOKINBODY`, cardType.name, cardType.path, ['inspected'], {legends: defaultLegendProps})
-    }, [getData, patient_id, cardType])
+  useEffect(() => {
+    if (graphData.length === 0) return
+    setRanges(graphData.map((datum) => {
+      return (
+        {start: start ? (new Date(start)).getTime() : (datum.data[0].x as Date).getTime(), end: end ? (new Date(end)).getTime() : (datum.data[datum.data.length - 1].x as Date).getTime()}
+      )
+    }))
+  }, [graphData, start, end])
 
-    useEffect(() => {console.log(graphData)}, [graphData])
+  useEffect(() => {
+    onRangeChange(ranges, colIndex, rowIndex)
+  }, [ranges, colIndex, rowIndex, onRangeChange])
 
-    return (
-      <Sheet
-        variant="outlined"
-        sx={{
-          borderRadius: 'sm',
-          p: 1,
-          flex: '1 1 auto'
-        }}
-      >
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 2,
-          justifyContent: 'space-between',
-          p: '0px 5px'
-        }}>
-          <Typography 
-            fontWeight="600" 
-            fontSize="20px"
-            sx={{
-                color: '#32383e'
-            }}
-            margin="auto 0"
-          >
-            {cardType.name}
-          </Typography>
+  useEffect(() => {
+    onTextChange(memo, colIndex, rowIndex)
+  }, [memo, colIndex, rowIndex, onTextChange])
+
+  useEffect(() => {
+    if (cardType.type === "Physical Exam") getData<PhysicalExam>(`/api/patients/${patient_id}/medical/physical_exam`, cardType.name, cardType.path, ['recorded'])
+    if (cardType.type === "IMOOVE") getData<DefaultInspection<ImooveContent[]>>(`/api/patients/${patient_id}/medical/inspections?inspection_type=IMOOVE`, cardType.name, cardType.path, ['inspected'])
+    if (cardType.type === "InBody") getData<DefaultInspection<InBodyContent>>(`/api/patients/${patient_id}/medical/inspections?inspection_type=INBODY`, cardType.name, cardType.path, ['inspected'])
+    if (cardType.type === "Exbody") getData<DefaultInspection<ExbodyContent>>(`/api/patients/${patient_id}/medical/inspections?inspection_type=EXBODY`, cardType.name, cardType.path, ['inspected'])
+    if (cardType.type === "운동능력검사") getData<DefaultInspection<PhysicalPerformanceContent>>(`/api/patients/${patient_id}/medical/inspections?inspection_type=PHYSICAL_PERFORMANCE`, cardType.name, cardType.path, ['inspected'])
+    if (cardType.type === "Lookin' Body") getData<DefaultInspection<LookinBodyContent>>(`/api/patients/${patient_id}/medical/inspections?inspection_type=LOOKINBODY`, cardType.name, cardType.path, ['inspected'], {legends: defaultLegendProps})
+  }, [getData, patient_id, cardType])
+
+  return (
+    <Sheet
+      variant="outlined"
+      sx={{
+        borderRadius: 'sm',
+        p: 1,
+        width: '100%'
+      }}
+    >
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 2,
+        justifyContent: 'space-between',
+        p: '0px 5px'
+      }}>
+        <Typography 
+          fontWeight="600" 
+          fontSize="20px"
+          sx={{
+            color: '#32383e'
+          }}
+          margin="auto 0"
+        >
+          {cardType.name}
+        </Typography>
+        {editable && 
           <IconButton>
             <Close 
               onClick={() => {cardClose(rowIndex, colIndex)}} 
               style={{ margin: 'auto 0' }}
             />
           </IconButton>
-        </Box>
-        <Divider component="div" sx={{ my: 1 }} />
-        <Box sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            p: '0px 5px'
+        }        
+      </Box>
+      <Divider component="div" sx={{ my: 1 }} />
+      {rangeSelectable &&
+        graphData.map((datum, index) => {
+          return (
+            ranges[index] ? 
+            <Stack key={index} direction='row' sx={{ px: 5, py: 2 }} gap={2}>
+              <FormControl size="md" sx={{ flex: '1 1 0' }}>
+                <FormLabel> {`범위 선택: ${datum.id}`} </FormLabel>
+                <Select
+                  size="md"
+                  placeholder="진단 선택"
+                  defaultValue={start !== undefined ? (new Date(start)).getTime() : (datum.data[0].x as Date).getTime()}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', gap: '0.25rem' }}>
+                      <Chip variant="soft" color="primary">
+                        {selected?.label}
+                      </Chip>
+                    </Box>
+                  )}
+                  slotProps={{ button: { sx: { whiteSpace: 'nowrap' } } }}
+                  onChange={(_, value) => {
+                    if (value !== null) setRanges([...ranges.slice(0, index), {...ranges[index], start: value}, ...ranges.slice(index + 1)])
+                  }}
+                  sx={{
+                    backgroundColor: '#ffffff'
+                  }}
+                  disabled={!editable}
+                >
+                  {datum.data.map((value, index) => {
+                    return (
+                      <Option value={(value.x as Date).getTime()} key={index}>{dayjs(value.x).format('YYYY-MM-DD')}</Option>
+                    )
+                  })}
+                </Select>
+              </FormControl>
+              <Divider orientation="vertical" />
+              <FormControl size="md" sx={{ flex: '1 1 0' }}>
+                <FormLabel><br/></FormLabel>
+                <Select
+                  size="md"
+                  placeholder="진단 선택"
+                  defaultValue={end !== undefined ? (new Date(end)).getTime() : (datum.data[datum.data.length - 1].x as Date).getTime()}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', gap: '0.25rem' }}>
+                      <Chip variant="soft" color="primary">
+                        {selected?.label}
+                      </Chip>
+                    </Box>
+                  )}
+                  slotProps={{ button: { sx: { whiteSpace: 'nowrap' } } }}
+                  onChange={(_, value) => {
+                    if (value !== null) setRanges([...ranges.slice(0, index), {...ranges[index], end: value}, ...ranges.slice(index + 1)])
+                  }}
+                  sx={{
+                    backgroundColor: '#ffffff'
+                  }}
+                  disabled={!editable}
+                >
+                  {datum.data.map((value, index) => {
+                    return (
+                      <Option value={(value.x as Date).getTime()} key={index}>{dayjs(value.x).format('YYYY-MM-DD')}</Option>
+                    )
+                  })}
+                </Select>
+              </FormControl>
+            </Stack> : null
+          )
+        })          
+      }        
+      <Box sx={{
+          justifyContent: 'center',
+          p: '0px 5px'
+        }}
+      >
+        <Sheet 
+          sx={{
+            minHeight: '300px',
+            width: '100%',
+            display: 'flex'
           }}
         >
-          <Sheet sx={{
-            minHeight: '300px',
-            width: '300px',
-            overflow: "auto",
-            flex: '1 1 auto',
-            '&::-webkit-scrollbar': {
-              display: 'none'
-            }
-          }}>
+          <div style={{ width: '100%', flexGrow: '1' }}>
             {cardType.type === "진료 기록" && <MedicalRecord isSummaryMode axiosMode={axiosMode} />}
-            {cardType.type !== "진료 기록" && <ResponsiveLine {...graphProps} data={graphData} axisLeft={{...graphProps.axisLeft, legend: yLabel}} />}
-          </Sheet>
-        </Box>
-      </Sheet>
-    );
+            {cardType.type !== "진료 기록" && 
+              <ResponsiveLine 
+                key={graphContainerKey}
+                {...graphProps} 
+                data={
+                  cloneDeep(slicedGraphData)
+                }
+                axisLeft={{...graphProps.axisLeft, legend: yLabel}} 
+              />
+            }
+          </div>
+        </Sheet>
+      </Box>
+      {useNote &&
+        <FormControl size="md">
+          <FormLabel>비고</FormLabel>
+          <Textarea
+              minRows={1}
+              placeholder="기타 사항"
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              sx={{
+                  backgroundColor: '#ffffff'
+              }}
+              disabled={!editable}
+          />
+        </FormControl>
+      }
+    </Sheet>
+  );
 };
 
 export default SummaryCard;

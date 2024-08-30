@@ -18,7 +18,7 @@ import axios from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { User } from '../interfaces';
 import { AdminPanelSettings, Call, CoPresent, Email, Work } from '@mui/icons-material';
-import { BASE_BACKEND_URL } from 'api/commons/request';
+import { BASE_BACKEND_URL, BASE_FILE_URL } from 'api/commons/request';
 
 const Pending = () => {
   const auth = window.localStorage.getItem("persist:auth")
@@ -152,7 +152,7 @@ const Pending = () => {
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <Avatar
                     variant="outlined"
-                    src={user.profile_url}
+                    src={`${BASE_FILE_URL}${user.profile_url}`}
                     sx={{ borderRadius: '50%' }}
                   />
                   <div>
@@ -249,7 +249,7 @@ const Pending = () => {
                   <Box sx={{ display: 'flex', gap: 2 }}>
                     <Avatar
                       variant="outlined"
-                      src={user.profile_url}
+                      src={`${BASE_FILE_URL}${user.profile_url}`}
                       sx={{ borderRadius: '50%' }}
                     />
                     <div>

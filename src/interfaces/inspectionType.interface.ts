@@ -1,6 +1,6 @@
 export type numberInput = number | ""
 export type rangeInput = {value: numberInput, min: numberInput, max: numberInput}
-export type inspectionContent = ImooveContent | InBodyContent | ExbodyContent | LookinBodyContent | PhysicalPerformanceContent | null
+export type inspectionContent = ImooveContent[] | InBodyContent | ExbodyContent | LookinBodyContent | PhysicalPerformanceContent | null
 
 export interface DefaultInspection<T extends inspectionContent> {
     file_urls: string[],
